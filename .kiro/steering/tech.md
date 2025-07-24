@@ -32,6 +32,18 @@ open chat.html
 python -m http.server 8000
 ```
 
+### Git Operations
+```bash
+# Use non-interactive commands only
+git log --oneline                    # View commit history
+git show --name-only <commit>        # Show files in commit
+git reset --soft HEAD~n             # Reset commits without losing changes
+git add <files>                      # Stage specific files
+git commit -m "message"              # Commit with message
+```
+
+**Important**: Avoid interactive git commands like `git rebase -i`, `git add -p`, or any command that opens an editor or requires user interaction during execution.
+
 ### Testing
 - Tests run automatically when the HTML file loads
 - All test results displayed in the browser interface
