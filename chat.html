@@ -733,6 +733,112 @@
             });
         });
         
+        // ===== CONNECTION CLOSURE TESTS (FAILING) =====
+        
+        describe('Connection Close Event Handler Tests', () => {
+            test('should have handleConnectionClose function defined', () => {
+                expect(typeof handleConnectionClose).toBe('function');
+            });
+            
+            test('should add connection closed message to chat log', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                handleConnectionClose();
+                expect(chatLog.value).toContain('System: Connection closed');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Connection closed\n'.length);
+            });
+            
+            test('should disable send button when connection closes', () => {
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = false; // Ensure it starts enabled
+                handleConnectionClose();
+                expect(sendBtn.disabled).toBe(true);
+            });
+            
+            test('should clear connection variable when connection closes', () => {
+                window.connection = { open: true };
+                handleConnectionClose();
+                expect(window.connection).toBeNull();
+            });
+        });
+        
+        describe('Connection Cleanup Tests', () => {
+            test('should have cleanupConnection function defined', () => {
+                expect(typeof cleanupConnection).toBe('function');
+            });
+            
+            test('should reset connection state for new connections', () => {
+                // Set up a mock connection state
+                window.connection = { open: true };
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = false;
+                
+                cleanupConnection();
+                
+                expect(window.connection).toBeNull();
+                expect(sendBtn.disabled).toBe(true);
+            });
+            
+            test('should allow new connections after cleanup', () => {
+                // Simulate connection cleanup
+                cleanupConnection();
+                
+                // Should be able to create new connection
+                const peerIdInput = document.getElementById('peer-id-input');
+                window.myId = 'my-test-id';
+                peerIdInput.value = 'new-peer-id';
+                
+                // Mock peer for testing
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return { peer: peerId, open: false };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                const result = handleConnectClick();
+                expect(result).toBe(true);
+                expect(window.connection).not.toBeNull();
+            });
+        });
+        
+        describe('Connection State Management Tests', () => {
+            test('should properly handle connection close event in setupConnectionHandlers', () => {
+                const mockConnection = {
+                    on: function(event, handler) {
+                        this['_' + event] = handler;
+                    }
+                };
+                
+                setupConnectionHandlers(mockConnection);
+                
+                // Verify close handler is set up
+                expect(typeof mockConnection._close).toBe('function');
+                
+                // Test that close handler calls handleConnectionClose
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                mockConnection._close();
+                
+                expect(chatLog.value).toContain('System: Connection closed');
+            });
+            
+            test('should handle multiple connection close events gracefully', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = ''; // Clear for this test
+                
+                // Call handleConnectionClose multiple times
+                handleConnectionClose();
+                handleConnectionClose();
+                
+                // Should only add one message per call
+                const lines = chatLog.value.split('\n').filter(line => line.trim());
+                const closeMessages = lines.filter(line => line.includes('Connection closed'));
+                expect(closeMessages.length).toBe(2);
+            });
+        });
+        
         // ===== APPLICATION VARIABLES =====
         
         let peer = null;
@@ -819,8 +925,7 @@
             
             // Handle connection close event
             conn.on('close', function() {
-                // This will be implemented in a later task
-                console.log('Connection closed');
+                handleConnectionClose();
             });
             
             // Handle connection errors
@@ -843,6 +948,22 @@
         function disableSendButton() {
             const sendBtn = document.getElementById('send-btn');
             sendBtn.disabled = true;
+        }
+        
+        // ===== CONNECTION CLOSURE FUNCTIONS =====
+        
+        function handleConnectionClose() {
+            addSystemMessage('Connection closed');
+            cleanupConnection();
+        }
+        
+        function cleanupConnection() {
+            // Disable send button
+            disableSendButton();
+            
+            // Clear connection reference
+            connection = null;
+            window.connection = null;
         }
         
         // ===== MESSAGE HANDLING FUNCTIONS =====
