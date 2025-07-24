@@ -380,6 +380,224 @@
             }, 3000);
         });
         
+        // ===== MESSAGE HANDLING TESTS (FAILING) =====
+        
+        describe('Send Button Click Handler Tests', () => {
+            test('should have handleSendClick function defined', () => {
+                expect(typeof handleSendClick).toBe('function');
+            });
+            
+            test('should not send empty messages', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = '';
+                const result = handleSendClick();
+                expect(result).toBe(false);
+            });
+            
+            test('should not send messages when not connected', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'test message';
+                window.connection = null;
+                const result = handleSendClick();
+                expect(result).toBe(false);
+            });
+            
+            test('should send message when connected with valid input', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'test message';
+                
+                // Mock connection for testing
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {
+                        this.lastSentData = data;
+                    }
+                };
+                window.connection = mockConnection;
+                
+                const result = handleSendClick();
+                expect(result).toBe(true);
+                expect(mockConnection.lastSentData).toBe('test message');
+            });
+            
+            test('should clear message input after sending', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'test message';
+                
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {}
+                };
+                window.connection = mockConnection;
+                
+                handleSendClick();
+                expect(messageInput.value).toBe('');
+            });
+        });
+        
+        describe('Message Sending Tests', () => {
+            test('should have sendMessage function defined', () => {
+                expect(typeof sendMessage).toBe('function');
+            });
+            
+            test('should send message through connection', () => {
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {
+                        this.lastSentData = data;
+                    }
+                };
+                
+                sendMessage('Hello World', mockConnection);
+                expect(mockConnection.lastSentData).toBe('Hello World');
+            });
+            
+            test('should add sent message to chat log with "Me:" prefix', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {}
+                };
+                
+                sendMessage('Hello World', mockConnection);
+                expect(chatLog.value).toContain('Me: Hello World');
+                expect(chatLog.value.length).toBe(initialLength + 'Me: Hello World\n'.length);
+            });
+        });
+        
+        describe('Message Receiving Tests', () => {
+            test('should have handleReceivedMessage function defined', () => {
+                expect(typeof handleReceivedMessage).toBe('function');
+            });
+            
+            test('should add received message to chat log with "Peer:" prefix', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                handleReceivedMessage('Hello from peer');
+                expect(chatLog.value).toContain('Peer: Hello from peer');
+                expect(chatLog.value.length).toBe(initialLength + 'Peer: Hello from peer\n'.length);
+            });
+        });
+        
+        describe('Message Formatting Tests', () => {
+            test('should have addMessageToChat function defined', () => {
+                expect(typeof addMessageToChat).toBe('function');
+            });
+            
+            test('should format message with "Me:" prefix', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                addMessageToChat('Test message', 'me');
+                expect(chatLog.value).toContain('Me: Test message');
+                expect(chatLog.value.length).toBe(initialLength + 'Me: Test message\n'.length);
+            });
+            
+            test('should format message with "Peer:" prefix', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                addMessageToChat('Test message', 'peer');
+                expect(chatLog.value).toContain('Peer: Test message');
+                expect(chatLog.value.length).toBe(initialLength + 'Peer: Test message\n'.length);
+            });
+            
+            test('should format message with "System:" prefix', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                addMessageToChat('Test message', 'system');
+                expect(chatLog.value).toContain('System: Test message');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Test message\n'.length);
+            });
+        });
+        
+        describe('Chat Log Update Tests', () => {
+            test('should scroll chat log to bottom after adding message', () => {
+                const chatLog = document.getElementById('chat-log');
+                
+                // Add multiple messages to create scrollable content
+                for (let i = 0; i < 20; i++) {
+                    addMessageToChat(`Message ${i}`, 'me');
+                }
+                
+                // Check that scroll position is at bottom
+                expect(chatLog.scrollTop).toBe(chatLog.scrollHeight - chatLog.clientHeight);
+            });
+            
+            test('should maintain message history in chat log', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = ''; // Clear for this test
+                
+                addMessageToChat('First message', 'me');
+                addMessageToChat('Second message', 'peer');
+                addMessageToChat('Third message', 'system');
+                
+                expect(chatLog.value).toContain('Me: First message');
+                expect(chatLog.value).toContain('Peer: Second message');
+                expect(chatLog.value).toContain('System: Third message');
+                
+                // Check order is maintained
+                const lines = chatLog.value.split('\n').filter(line => line.trim());
+                expect(lines[0]).toBe('Me: First message');
+                expect(lines[1]).toBe('Peer: Second message');
+                expect(lines[2]).toBe('System: Third message');
+            });
+        });
+        
+        describe('Enter Key Message Sending Tests', () => {
+            test('should have handleMessageInputKeyPress function defined', () => {
+                expect(typeof handleMessageInputKeyPress).toBe('function');
+            });
+            
+            test('should send message on Enter key press', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'test message';
+                
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {
+                        this.lastSentData = data;
+                    }
+                };
+                window.connection = mockConnection;
+                
+                const mockEvent = {
+                    key: 'Enter',
+                    preventDefault: function() {}
+                };
+                
+                handleMessageInputKeyPress(mockEvent);
+                expect(mockConnection.lastSentData).toBe('test message');
+                expect(messageInput.value).toBe('');
+            });
+            
+            test('should not send message on other key presses', () => {
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'test message';
+                
+                const mockConnection = {
+                    open: true,
+                    send: function(data) {
+                        this.lastSentData = data;
+                    }
+                };
+                window.connection = mockConnection;
+                
+                const mockEvent = {
+                    key: 'a',
+                    preventDefault: function() {}
+                };
+                
+                handleMessageInputKeyPress(mockEvent);
+                expect(mockConnection.lastSentData).toBe(undefined);
+                expect(messageInput.value).toBe('test message');
+            });
+        });
+        
         // ===== CONNECTION ESTABLISHMENT TESTS (FAILING) =====
         
         describe('Connection Button Click Handler Tests', () => {
@@ -529,10 +747,7 @@
         // ===== HELPER FUNCTIONS =====
         
         function addSystemMessage(message) {
-            const chatLog = document.getElementById('chat-log');
-            const formattedMessage = `System: ${message}\n`;
-            chatLog.value += formattedMessage;
-            chatLog.scrollTop = chatLog.scrollHeight;
+            addMessageToChat(message, 'system');
         }
         
         function updateMyId(id) {
@@ -599,8 +814,7 @@
             
             // Handle incoming data (messages)
             conn.on('data', function(data) {
-                // This will be implemented in the next task
-                console.log('Received data:', data);
+                handleReceivedMessage(data);
             });
             
             // Handle connection close event
@@ -629,6 +843,75 @@
         function disableSendButton() {
             const sendBtn = document.getElementById('send-btn');
             sendBtn.disabled = true;
+        }
+        
+        // ===== MESSAGE HANDLING FUNCTIONS =====
+        
+        function handleSendClick() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            // Validate input
+            if (!message) {
+                return false;
+            }
+            
+            // Check if connected
+            if (!connection || !connection.open) {
+                addSystemMessage('Not connected to any peer');
+                return false;
+            }
+            
+            // Send message
+            sendMessage(message, connection);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            return true;
+        }
+        
+        function sendMessage(message, conn) {
+            // Send message through connection
+            conn.send(message);
+            
+            // Add to chat log with "Me:" prefix
+            addMessageToChat(message, 'me');
+        }
+        
+        function handleReceivedMessage(message) {
+            // Add received message to chat log with "Peer:" prefix
+            addMessageToChat(message, 'peer');
+        }
+        
+        function addMessageToChat(message, sender) {
+            const chatLog = document.getElementById('chat-log');
+            let prefix;
+            
+            switch (sender) {
+                case 'me':
+                    prefix = 'Me:';
+                    break;
+                case 'peer':
+                    prefix = 'Peer:';
+                    break;
+                case 'system':
+                    prefix = 'System:';
+                    break;
+                default:
+                    prefix = 'Unknown:';
+            }
+            
+            const formattedMessage = `${prefix} ${message}\n`;
+            chatLog.value += formattedMessage;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        
+        function handleMessageInputKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleSendClick();
+            }
         }
         
         // ===== PEERJS INITIALIZATION =====
@@ -670,6 +953,14 @@
             // Connect button click handler
             const connectBtn = document.getElementById('connect-btn');
             connectBtn.addEventListener('click', handleConnectClick);
+            
+            // Send button click handler
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.addEventListener('click', handleSendClick);
+            
+            // Message input Enter key handler
+            const messageInput = document.getElementById('message-input');
+            messageInput.addEventListener('keypress', handleMessageInputKeyPress);
         }
         
         // Initialize PeerJS when page loads
