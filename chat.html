@@ -124,8 +124,7 @@
         </div>
     </div>
 
-    <!-- Jest Testing Framework -->
-    <script src="https://unpkg.com/jest-lite@1.0.0-alpha.4/dist/core.js"></script>
+    <!-- Simple Testing Framework (Jest-lite was causing issues) -->
     
     <!-- PeerJS Library -->
     <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
@@ -135,7 +134,7 @@
         
         // Simple test framework setup
         let testResults = [];
-        let testOutput = document.getElementById('test-output');
+        let testOutput;
         let asyncTestsCompleted = 0;
         let totalAsyncTests = 0;
         
@@ -206,6 +205,9 @@
         }
         
         function displayTestResults() {
+            testOutput = testOutput || document.getElementById('test-output');
+            if (!testOutput) return;
+            
             const passCount = testResults.filter(r => r.status === 'PASS').length;
             const failCount = testResults.filter(r => r.status === 'FAIL').length;
             
@@ -2249,7 +2251,7 @@
                 if (totalAsyncTests === 0) {
                     displayTestResults();
                 }
-            }, 100);
+            }, 1000);
         }
         
         // Initialize application when DOM is ready
