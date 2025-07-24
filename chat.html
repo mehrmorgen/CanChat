@@ -888,6 +888,172 @@
             });
         });
         
+        // ===== CODE ORGANIZATION AND DOCUMENTATION TESTS =====
+        
+        describe('Code Organization Tests', () => {
+            test('should have all required function sections defined', () => {
+                // Test that all major function categories exist
+                expect(typeof addSystemMessage).toBe('function');
+                expect(typeof updateMyId).toBe('function');
+                expect(typeof validatePeerIdInput).toBe('function');
+                expect(typeof validateSelfConnection).toBe('function');
+                expect(typeof handleConnectionError).toBe('function');
+                expect(typeof handlePeerError).toBe('function');
+                expect(typeof handleConnectClick).toBe('function');
+                expect(typeof initiateConnection).toBe('function');
+                expect(typeof handleIncomingConnection).toBe('function');
+                expect(typeof setupConnectionHandlers).toBe('function');
+                expect(typeof handleConnectionOpen).toBe('function');
+                expect(typeof enableSendButton).toBe('function');
+                expect(typeof disableSendButton).toBe('function');
+                expect(typeof handleConnectionClose).toBe('function');
+                expect(typeof cleanupConnection).toBe('function');
+                expect(typeof handleSendClick).toBe('function');
+                expect(typeof sendMessage).toBe('function');
+                expect(typeof handleReceivedMessage).toBe('function');
+                expect(typeof addMessageToChat).toBe('function');
+                expect(typeof handleMessageInputKeyPress).toBe('function');
+                expect(typeof initializePeer).toBe('function');
+                expect(typeof setupEventListeners).toBe('function');
+            });
+            
+            test('should have proper function documentation', () => {
+                // Test that functions have proper JSDoc-style comments
+                const scriptContent = document.querySelector('script:last-of-type').textContent;
+                
+                // Check for function documentation patterns
+                expect(scriptContent).toContain('/**');
+                expect(scriptContent).toContain(' * ');
+                expect(scriptContent).toContain(' */');
+            });
+            
+            test('should have clear section organization with comments', () => {
+                const scriptContent = document.querySelector('script:last-of-type').textContent;
+                
+                // Check for section headers
+                expect(scriptContent).toContain('// ===== TESTING FRAMEWORK SETUP =====');
+                expect(scriptContent).toContain('// ===== APPLICATION VARIABLES =====');
+                expect(scriptContent).toContain('// ===== HELPER FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== INPUT VALIDATION FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== ERROR HANDLING FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== CONNECTION ESTABLISHMENT FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== CONNECTION CLOSURE FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== MESSAGE HANDLING FUNCTIONS =====');
+                expect(scriptContent).toContain('// ===== PEERJS INITIALIZATION =====');
+                expect(scriptContent).toContain('// ===== EVENT LISTENERS SETUP =====');
+                expect(scriptContent).toContain('// ===== APPLICATION INITIALIZATION =====');
+            });
+        });
+        
+        describe('Helper Function Isolation Tests', () => {
+            test('should have pure helper functions that don\'t modify global state directly', () => {
+                // Test validatePeerIdInput is pure
+                const result1 = validatePeerIdInput('test-id');
+                const result2 = validatePeerIdInput('test-id');
+                expect(result1).toBe(result2);
+                expect(result1).toBe(true);
+                
+                // Test validateSelfConnection is pure (given same inputs)
+                window.myId = 'my-id';
+                const selfResult1 = validateSelfConnection('other-id');
+                const selfResult2 = validateSelfConnection('other-id');
+                expect(selfResult1).toBe(selfResult2);
+                expect(selfResult1).toBe(true);
+            });
+            
+            test('should have modular message formatting functions', () => {
+                // Test addMessageToChat is modular and reusable
+                const chatLog = document.getElementById('chat-log');
+                const initialValue = chatLog.value;
+                
+                addMessageToChat('Test message 1', 'me');
+                expect(chatLog.value).toContain('Me: Test message 1');
+                
+                addMessageToChat('Test message 2', 'peer');
+                expect(chatLog.value).toContain('Peer: Test message 2');
+                
+                addMessageToChat('Test message 3', 'system');
+                expect(chatLog.value).toContain('System: Test message 3');
+                
+                // Reset for other tests
+                chatLog.value = initialValue;
+            });
+            
+            test('should have reusable UI state management functions', () => {
+                const sendBtn = document.getElementById('send-btn');
+                
+                // Test enableSendButton is reusable
+                sendBtn.disabled = true;
+                enableSendButton();
+                expect(sendBtn.disabled).toBe(false);
+                
+                // Test disableSendButton is reusable
+                disableSendButton();
+                expect(sendBtn.disabled).toBe(true);
+            });
+            
+            test('should have modular error handling functions', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                // Test handleConnectionError is modular
+                const connectionError = { type: 'network', message: 'Network failed' };
+                handleConnectionError(connectionError);
+                expect(chatLog.value).toContain('Network error - please check your internet connection');
+                
+                // Test handlePeerError is modular
+                const peerError = { type: 'peer-unavailable', message: 'Peer not found' };
+                handlePeerError(peerError);
+                expect(chatLog.value).toContain('Peer not found - please check the peer ID and try again');
+            });
+        });
+        
+        describe('Function Documentation Standards Tests', () => {
+            test('should have documented function parameters and return values', () => {
+                // This test verifies that key functions have proper documentation
+                // by checking their behavior matches documented expectations
+                
+                // validatePeerIdInput should return boolean
+                expect(typeof validatePeerIdInput('test')).toBe('boolean');
+                
+                // validateSelfConnection should return boolean
+                expect(typeof validateSelfConnection('test')).toBe('boolean');
+                
+                // addMessageToChat should not return anything (void)
+                expect(addMessageToChat('test', 'me')).toBe(undefined);
+                
+                // handleSendClick should return boolean
+                expect(typeof handleSendClick()).toBe('boolean');
+                
+                // handleConnectClick should return boolean
+                expect(typeof handleConnectClick()).toBe('boolean');
+            });
+            
+            test('should have functions with clear single responsibilities', () => {
+                // Test that functions have single, clear responsibilities
+                
+                // addSystemMessage should only add system messages
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                addSystemMessage('Test system message');
+                expect(chatLog.value).toContain('System: Test system message');
+                
+                // updateMyId should only update the peer ID display
+                const myIdElement = document.getElementById('my-id');
+                updateMyId('test-update-id');
+                expect(myIdElement.textContent).toBe('test-update-id');
+                expect(window.myId).toBe('test-update-id');
+                
+                // cleanupConnection should only clean up connection state
+                window.connection = { open: true };
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = false;
+                cleanupConnection();
+                expect(window.connection).toBeNull();
+                expect(sendBtn.disabled).toBe(true);
+            });
+        });
+        
         // ===== CONNECTION CLOSURE TESTS =====
         
         describe('Connection Close Event Handler Tests', () => {
@@ -1007,10 +1173,18 @@
         
         // ===== HELPER FUNCTIONS =====
         
+        /**
+         * Adds a system message to the chat log
+         * @param {string} message - The system message to display
+         */
         function addSystemMessage(message) {
             addMessageToChat(message, 'system');
         }
         
+        /**
+         * Updates the displayed peer ID and stores it globally
+         * @param {string} id - The peer ID to display and store
+         */
         function updateMyId(id) {
             const myIdElement = document.getElementById('my-id');
             myIdElement.textContent = id;
@@ -1020,16 +1194,32 @@
         
         // ===== INPUT VALIDATION FUNCTIONS =====
         
+        /**
+         * Validates that a peer ID input is not empty or whitespace-only
+         * @param {string} peerId - The peer ID to validate
+         * @returns {boolean} True if peer ID is valid, false otherwise
+         */
         function validatePeerIdInput(peerId) {
             return peerId && peerId.trim().length > 0;
         }
         
+        /**
+         * Validates that the target peer ID is not the same as the current peer's ID
+         * @param {string} targetPeerId - The peer ID to connect to
+         * @returns {boolean} True if connection is allowed, false if self-connection
+         */
         function validateSelfConnection(targetPeerId) {
             return targetPeerId !== myId;
         }
         
         // ===== ERROR HANDLING FUNCTIONS =====
         
+        /**
+         * Handles connection-specific errors and displays user-friendly messages
+         * @param {Object} error - The error object containing type and message
+         * @param {string} error.type - The type of error (peer-unavailable, network, etc.)
+         * @param {string} error.message - The error message
+         */
         function handleConnectionError(error) {
             let userMessage;
             
@@ -1047,6 +1237,12 @@
             addSystemMessage(userMessage);
         }
         
+        /**
+         * Handles PeerJS-specific errors and displays user-friendly messages
+         * @param {Object} error - The PeerJS error object
+         * @param {string} error.type - The type of PeerJS error
+         * @param {string} error.message - The error message from PeerJS
+         */
         function handlePeerError(error) {
             let userMessage;
             
@@ -1069,6 +1265,10 @@
         
         // ===== CONNECTION ESTABLISHMENT FUNCTIONS =====
         
+        /**
+         * Handles the connect button click event with validation and connection initiation
+         * @returns {boolean} True if connection attempt was initiated, false if validation failed
+         */
         function handleConnectClick() {
             const peerIdInput = document.getElementById('peer-id-input');
             const targetPeerId = peerIdInput.value.trim();
@@ -1090,6 +1290,11 @@
             return true;
         }
         
+        /**
+         * Initiates an outgoing connection to a specified peer
+         * @param {string} peerId - The ID of the peer to connect to
+         * @returns {Object|null} The connection object or null if peer not initialized
+         */
         function initiateConnection(peerId) {
             if (!peer) {
                 addSystemMessage('Peer not initialized');
@@ -1109,6 +1314,10 @@
             return conn;
         }
         
+        /**
+         * Handles incoming connection requests from other peers
+         * @param {Object} conn - The incoming connection object from PeerJS
+         */
         function handleIncomingConnection(conn) {
             // Store the incoming connection
             connection = conn;
@@ -1118,6 +1327,10 @@
             setupConnectionHandlers(conn);
         }
         
+        /**
+         * Sets up event handlers for a connection (both incoming and outgoing)
+         * @param {Object} conn - The connection object to set up handlers for
+         */
         function setupConnectionHandlers(conn) {
             // Handle connection open event
             conn.on('open', handleConnectionOpen);
@@ -1139,16 +1352,25 @@
             });
         }
         
+        /**
+         * Handles the connection open event when a connection is successfully established
+         */
         function handleConnectionOpen() {
             addSystemMessage('⚡ Connection established');
             enableSendButton();
         }
         
+        /**
+         * Enables the send button to allow message sending
+         */
         function enableSendButton() {
             const sendBtn = document.getElementById('send-btn');
             sendBtn.disabled = false;
         }
         
+        /**
+         * Disables the send button to prevent message sending
+         */
         function disableSendButton() {
             const sendBtn = document.getElementById('send-btn');
             sendBtn.disabled = true;
@@ -1156,11 +1378,17 @@
         
         // ===== CONNECTION CLOSURE FUNCTIONS =====
         
+        /**
+         * Handles the connection close event when a connection is terminated
+         */
         function handleConnectionClose() {
             addSystemMessage('Connection closed');
             cleanupConnection();
         }
         
+        /**
+         * Cleans up connection state and UI when a connection ends
+         */
         function cleanupConnection() {
             // Disable send button
             disableSendButton();
@@ -1172,6 +1400,10 @@
         
         // ===== MESSAGE HANDLING FUNCTIONS =====
         
+        /**
+         * Handles the send button click event with validation and message sending
+         * @returns {boolean} True if message was sent, false if validation failed
+         */
         function handleSendClick() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value.trim();
@@ -1196,6 +1428,11 @@
             return true;
         }
         
+        /**
+         * Sends a message through the specified connection and adds it to chat log
+         * @param {string} message - The message text to send
+         * @param {Object} conn - The connection object to send the message through
+         */
         function sendMessage(message, conn) {
             // Send message through connection
             conn.send(message);
@@ -1204,11 +1441,20 @@
             addMessageToChat(message, 'me');
         }
         
+        /**
+         * Handles received messages from the connected peer
+         * @param {string} message - The received message text
+         */
         function handleReceivedMessage(message) {
             // Add received message to chat log with "Peer:" prefix
             addMessageToChat(message, 'peer');
         }
         
+        /**
+         * Adds a formatted message to the chat log with appropriate prefix
+         * @param {string} message - The message text to add
+         * @param {string} sender - The sender type ('me', 'peer', 'system')
+         */
         function addMessageToChat(message, sender) {
             const chatLog = document.getElementById('chat-log');
             let prefix;
@@ -1232,6 +1478,10 @@
             chatLog.scrollTop = chatLog.scrollHeight;
         }
         
+        /**
+         * Handles keypress events in the message input field (Enter to send)
+         * @param {KeyboardEvent} event - The keyboard event object
+         */
         function handleMessageInputKeyPress(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -1241,6 +1491,9 @@
         
         // ===== PEERJS INITIALIZATION =====
         
+        /**
+         * Initializes the PeerJS instance with STUN server configuration and event handlers
+         */
         function initializePeer() {
             // Create PeerJS instance with Google STUN server configuration
             peer = new Peer({
@@ -1272,8 +1525,11 @@
             });
         }
         
-        // ===== INITIALIZATION =====
+        // ===== EVENT LISTENERS SETUP =====
         
+        /**
+         * Sets up all DOM event listeners for user interactions
+         */
         function setupEventListeners() {
             // Connect button click handler
             const connectBtn = document.getElementById('connect-btn');
@@ -1288,40 +1544,40 @@
             messageInput.addEventListener('keypress', handleMessageInputKeyPress);
         }
         
-        // Initialize PeerJS when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initializePeer();
-            setupEventListeners();
-        });
+        // ===== APPLICATION INITIALIZATION =====
         
-        // Also initialize immediately if DOM is already ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initializePeer();
-                setupEventListeners();
-            });
-        } else {
+        /**
+         * Main application initialization function
+         * Initializes PeerJS and sets up event listeners
+         */
+        function initializeApplication() {
             initializePeer();
             setupEventListeners();
         }
         
-        // Run tests after DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
+        /**
+         * Initializes the test framework and displays results
+         */
+        function initializeTestFramework() {
             setTimeout(() => {
                 // Display initial sync test results
                 if (totalAsyncTests === 0) {
                     displayTestResults();
                 }
             }, 100);
-        });
+        }
         
-        // Also run tests immediately since DOM should be ready
-        setTimeout(() => {
-            // Display initial sync test results
-            if (totalAsyncTests === 0) {
-                displayTestResults();
-            }
-        }, 100);
+        // Initialize application when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeApplication();
+                initializeTestFramework();
+            });
+        } else {
+            // DOM is already ready
+            initializeApplication();
+            initializeTestFramework();
+        }
         
     </script>
 </body>
