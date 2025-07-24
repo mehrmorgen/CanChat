@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC PeerJS Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        
+        input, button, textarea {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        #chat-log {
+            width: 100%;
+            height: 200px;
+            resize: vertical;
+            font-family: monospace;
+            background-color: #f8f9fa;
+        }
+        
+        #my-id {
+            font-weight: bold;
+            color: #28a745;
+            padding: 5px;
+            background-color: #d4edda;
+            border-radius: 4px;
+        }
+        
+        .test-results {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-pass {
+            color: #28a745;
+        }
+        
+        .test-fail {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC PeerJS Chat</h1>
+        
+        <div class="section">
+            <h3>Your Peer ID</h3>
+            <div id="my-id">Connecting...</div>
+        </div>
+        
+        <div class="section">
+            <h3>Connect to Peer</h3>
+            <input type="text" id="peer-id-input" placeholder="Enter peer ID to connect">
+            <button id="connect-btn">Connect</button>
+        </div>
+        
+        <div class="section">
+            <h3>Chat</h3>
+            <textarea id="chat-log" readonly placeholder="Chat messages will appear here..."></textarea>
+            <div>
+                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="send-btn" disabled>Send</button>
+            </div>
+        </div>
+        
+        <div class="test-results">
+            <h3>Test Results</h3>
+            <div id="test-output"></div>
+        </div>
+    </div>
+
+    <!-- Jest Testing Framework -->
+    <script src="https://unpkg.com/jest-lite@1.0.0-alpha.4/dist/core.js"></script>
+    
+    <!-- PeerJS Library -->
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    
+    <script>
+        // ===== TESTING FRAMEWORK SETUP =====
+        
+        // Simple test framework setup
+        let testResults = [];
+        let testOutput = document.getElementById('test-output');
+        let asyncTestsCompleted = 0;
+        let totalAsyncTests = 0;
+        
+        function describe(description, testSuite) {
+            console.log(`\n=== ${description} ===`);
+            testSuite();
+        }
+        
+        function test(description, testFunction) {
+            try {
+                testFunction();
+                testResults.push({ description, status: 'PASS', error: null });
+                console.log(`✓ ${description}`);
+            } catch (error) {
+                testResults.push({ description, status: 'FAIL', error: error.message });
+                console.log(`✗ ${description}: ${error.message}`);
+            }
+        }
+        
+        function asyncTest(description, testFunction, timeout = 5000) {
+            totalAsyncTests++;
+            setTimeout(() => {
+                try {
+                    testFunction();
+                    testResults.push({ description, status: 'PASS', error: null });
+                    console.log(`✓ ${description}`);
+                } catch (error) {
+                    testResults.push({ description, status: 'FAIL', error: error.message });
+                    console.log(`✗ ${description}: ${error.message}`);
+                }
+                asyncTestsCompleted++;
+                if (asyncTestsCompleted === totalAsyncTests) {
+                    displayTestResults();
+                }
+            }, timeout);
+        }
+        
+        function expect(actual) {
+            return {
+                toBe: (expected) => {
+                    if (actual !== expected) {
+                        throw new Error(`Expected ${expected}, but got ${actual}`);
+                    }
+                },
+                toBeNull: () => {
+                    if (actual !== null) {
+                        throw new Error(`Expected null, but got ${actual}`);
+                    }
+                },
+                not: {
+                    toBeNull: () => {
+                        if (actual === null) {
+                            throw new Error(`Expected not null, but got null`);
+                        }
+                    }
+                },
+                toBeTruthy: () => {
+                    if (!actual) {
+                        throw new Error(`Expected truthy value, but got ${actual}`);
+                    }
+                },
+                toContain: (expected) => {
+                    if (!actual.includes(expected)) {
+                        throw new Error(`Expected "${actual}" to contain "${expected}"`);
+                    }
+                }
+            };
+        }
+        
+        function displayTestResults() {
+            const passCount = testResults.filter(r => r.status === 'PASS').length;
+            const failCount = testResults.filter(r => r.status === 'FAIL').length;
+            
+            let html = `<strong>Tests: ${passCount} passed, ${failCount} failed</strong><br><br>`;
+            
+            testResults.forEach(result => {
+                const className = result.status === 'PASS' ? 'test-pass' : 'test-fail';
+                html += `<div class="${className}">`;
+                html += `${result.status === 'PASS' ? '✓' : '✗'} ${result.description}`;
+                if (result.error) {
+                    html += ` - ${result.error}`;
+                }
+                html += `</div>`;
+            });
+            
+            testOutput.innerHTML = html;
+        }
+        
+        // ===== INITIAL FAILING TESTS =====
+        
+        describe('DOM Element Existence Tests', () => {
+            test('should have my-id element', () => {
+                const element = document.getElementById('my-id');
+                expect(element).not.toBeNull();
+            });
+            
+            test('should have peer-id-input element', () => {
+                const element = document.getElementById('peer-id-input');
+                expect(element).not.toBeNull();
+            });
+            
+            test('should have connect-btn element', () => {
+                const element = document.getElementById('connect-btn');
+                expect(element).not.toBeNull();
+            });
+            
+            test('should have chat-log element', () => {
+                const element = document.getElementById('chat-log');
+                expect(element).not.toBeNull();
+            });
+            
+            test('should have message-input element', () => {
+                const element = document.getElementById('message-input');
+                expect(element).not.toBeNull();
+            });
+            
+            test('should have send-btn element', () => {
+                const element = document.getElementById('send-btn');
+                expect(element).not.toBeNull();
+            });
+        });
+        
+        describe('Basic Structure Tests', () => {
+            test('should have correct page title', () => {
+                expect(document.title).toBe('WebRTC PeerJS Chat');
+            });
+            
+            test('should have main heading', () => {
+                const heading = document.querySelector('h1');
+                expect(heading).not.toBeNull();
+                expect(heading.textContent).toContain('WebRTC PeerJS Chat');
+            });
+            
+            test('should have send button initially disabled', () => {
+                const sendBtn = document.getElementById('send-btn');
+                expect(sendBtn.disabled).toBe(true);
+            });
+            
+            test('should have chat-log as textarea', () => {
+                const chatLog = document.getElementById('chat-log');
+                expect(chatLog.tagName.toLowerCase()).toBe('textarea');
+            });
+            
+            test('should have peer-id-input as input field', () => {
+                const peerInput = document.getElementById('peer-id-input');
+                expect(peerInput.tagName.toLowerCase()).toBe('input');
+            });
+        });
+        
+        describe('CSS and Styling Tests', () => {
+            test('should have basic styling applied', () => {
+                const body = document.body;
+                const computedStyle = window.getComputedStyle(body);
+                expect(computedStyle.fontFamily).toContain('Arial');
+            });
+            
+            test('should have container with proper styling', () => {
+                const container = document.querySelector('.container');
+                expect(container).not.toBeNull();
+                const computedStyle = window.getComputedStyle(container);
+                expect(computedStyle.backgroundColor).toBe('rgb(255, 255, 255)');
+            });
+        });
+        
+        describe('External Library Tests', () => {
+            test('should have PeerJS library loaded', () => {
+                expect(typeof Peer).toBe('function');
+            });
+        });
+        
+        // ===== PEERJS INITIALIZATION TESTS =====
+        
+        describe('PeerJS Initialization Tests', () => {
+            test('should initially display "Connecting..." in my-id element', () => {
+                const myIdElement = document.getElementById('my-id');
+                expect(myIdElement.textContent).toBe('Connecting...');
+            });
+            
+            test('should have empty chat log initially', () => {
+                const chatLog = document.getElementById('chat-log');
+                expect(chatLog.value).toBe('');
+            });
+            
+            test('should have helper functions defined', () => {
+                expect(typeof addSystemMessage).toBe('function');
+                expect(typeof updateMyId).toBe('function');
+                expect(typeof initializePeer).toBe('function');
+            });
+            
+            test('addSystemMessage function should work correctly', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialValue = chatLog.value;
+                addSystemMessage('Test message');
+                expect(chatLog.value).toContain('System: Test message');
+                expect(chatLog.value.length).toBe(initialValue.length + 'System: Test message\n'.length);
+            });
+            
+            test('updateMyId function should work correctly', () => {
+                const myIdElement = document.getElementById('my-id');
+                updateMyId('test-id-123');
+                expect(myIdElement.textContent).toBe('test-id-123');
+                expect(window.myId).toBe('test-id-123');
+                // Reset for other tests
+                myIdElement.textContent = 'Connecting...';
+                window.myId = null;
+            });
+        });
+        
+        // ===== ASYNC PEERJS TESTS =====
+        
+        describe('PeerJS Async Behavior Tests', () => {
+            asyncTest('should create PeerJS instance after initialization', () => {
+                expect(window.peer).not.toBeNull();
+                expect(window.peer instanceof Peer).toBe(true);
+            }, 1000);
+            
+            asyncTest('should configure PeerJS with Google STUN server', () => {
+                expect(window.peer).not.toBeNull();
+                expect(window.peer._options).not.toBeNull();
+                expect(window.peer._options.config).not.toBeNull();
+                expect(window.peer._options.config.iceServers).not.toBeNull();
+                expect(window.peer._options.config.iceServers.length).toBe(1);
+                expect(window.peer._options.config.iceServers[0].urls).toBe('stun:stun.l.google.com:19302');
+            }, 1000);
+            
+            asyncTest('should update peer ID display when ready', () => {
+                const myIdElement = document.getElementById('my-id');
+                // Should no longer show "Connecting..." after peer is ready
+                expect(myIdElement.textContent).not.toBe('Connecting...');
+                expect(myIdElement.textContent.length).toBe(16); // PeerJS generates 16-character IDs
+            }, 3000);
+            
+            asyncTest('should add system message when peer ID is ready', () => {
+                const chatLog = document.getElementById('chat-log');
+                expect(chatLog.value).toContain('System: Your ID is ready; share it with your peer.');
+            }, 3000);
+            
+            asyncTest('should set global myId variable when ready', () => {
+                expect(window.myId).not.toBeNull();
+                expect(typeof window.myId).toBe('string');
+                expect(window.myId.length).toBe(16);
+            }, 3000);
+        });
+        
+        // ===== CONNECTION ESTABLISHMENT TESTS (FAILING) =====
+        
+        describe('Connection Button Click Handler Tests', () => {
+            test('should have handleConnectClick function defined', () => {
+                expect(typeof handleConnectClick).toBe('function');
+            });
+            
+            test('should prevent connection with empty peer ID', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                peerIdInput.value = '';
+                const result = handleConnectClick();
+                expect(result).toBe(false);
+            });
+            
+            test('should prevent self-connection', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                // Set a mock peer ID for testing
+                window.myId = 'test-peer-id';
+                peerIdInput.value = 'test-peer-id';
+                const result = handleConnectClick();
+                expect(result).toBe(false);
+            });
+            
+            test('should initiate connection with valid peer ID', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                window.myId = 'my-test-id';
+                peerIdInput.value = 'other-peer-id';
+                const result = handleConnectClick();
+                expect(result).toBe(true);
+            });
+        });
+        
+        describe('Outgoing Connection Establishment Tests', () => {
+            test('should have initiateConnection function defined', () => {
+                expect(typeof initiateConnection).toBe('function');
+            });
+            
+            test('should create connection when peer is available', () => {
+                // Mock peer object for testing
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return { peer: peerId, open: false };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                const conn = initiateConnection('test-peer-id');
+                expect(conn).not.toBeNull();
+                expect(conn.peer).toBe('test-peer-id');
+            });
+            
+            test('should store connection globally', () => {
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return { peer: peerId, open: false };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                initiateConnection('test-peer-id');
+                expect(window.connection).not.toBeNull();
+            });
+        });
+        
+        describe('Incoming Connection Handling Tests', () => {
+            test('should have handleIncomingConnection function defined', () => {
+                expect(typeof handleIncomingConnection).toBe('function');
+            });
+            
+            test('should accept incoming connection', () => {
+                const mockConnection = { peer: 'incoming-peer-id', open: false };
+                handleIncomingConnection(mockConnection);
+                expect(window.connection).toBe(mockConnection);
+            });
+            
+            test('should setup connection event handlers for incoming connection', () => {
+                const mockConnection = { 
+                    peer: 'incoming-peer-id', 
+                    open: false,
+                    on: function(event, handler) {
+                        this['_' + event] = handler;
+                    }
+                };
+                handleIncomingConnection(mockConnection);
+                expect(typeof mockConnection._open).toBe('function');
+                expect(typeof mockConnection._data).toBe('function');
+                expect(typeof mockConnection._close).toBe('function');
+            });
+        });
+        
+        describe('Connection Open Event Tests', () => {
+            test('should have handleConnectionOpen function defined', () => {
+                expect(typeof handleConnectionOpen).toBe('function');
+            });
+            
+            test('should add connection established message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                handleConnectionOpen();
+                expect(chatLog.value).toContain('System: ⚡ Connection established');
+                expect(chatLog.value.length).toBe(initialLength + 'System: ⚡ Connection established\n'.length);
+            });
+            
+            test('should enable send button when connection opens', () => {
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = true; // Ensure it starts disabled
+                handleConnectionOpen();
+                expect(sendBtn.disabled).toBe(false);
+            });
+        });
+        
+        describe('Send Button State Management Tests', () => {
+            test('should have enableSendButton function defined', () => {
+                expect(typeof enableSendButton).toBe('function');
+            });
+            
+            test('should have disableSendButton function defined', () => {
+                expect(typeof disableSendButton).toBe('function');
+            });
+            
+            test('enableSendButton should enable the send button', () => {
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = true;
+                enableSendButton();
+                expect(sendBtn.disabled).toBe(false);
+            });
+            
+            test('disableSendButton should disable the send button', () => {
+                const sendBtn = document.getElementById('send-btn');
+                sendBtn.disabled = false;
+                disableSendButton();
+                expect(sendBtn.disabled).toBe(true);
+            });
+        });
+        
+        // ===== APPLICATION VARIABLES =====
+        
+        let peer = null;
+        let connection = null;
+        let myId = null;
+        
+        // Expose variables globally for testing
+        window.peer = peer;
+        window.connection = connection;
+        window.myId = myId;
+        
+        // ===== HELPER FUNCTIONS =====
+        
+        function addSystemMessage(message) {
+            const chatLog = document.getElementById('chat-log');
+            const formattedMessage = `System: ${message}\n`;
+            chatLog.value += formattedMessage;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        
+        function updateMyId(id) {
+            const myIdElement = document.getElementById('my-id');
+            myIdElement.textContent = id;
+            myId = id;
+            window.myId = id; // Update global for testing
+        }
+        
+        // ===== CONNECTION ESTABLISHMENT FUNCTIONS =====
+        
+        function handleConnectClick() {
+            const peerIdInput = document.getElementById('peer-id-input');
+            const targetPeerId = peerIdInput.value.trim();
+            
+            // Validate input
+            if (!targetPeerId) {
+                addSystemMessage('Please enter a peer ID to connect');
+                return false;
+            }
+            
+            // Prevent self-connection
+            if (targetPeerId === myId) {
+                addSystemMessage('Cannot connect to yourself');
+                return false;
+            }
+            
+            // Initiate connection
+            initiateConnection(targetPeerId);
+            return true;
+        }
+        
+        function initiateConnection(peerId) {
+            if (!peer) {
+                addSystemMessage('Peer not initialized');
+                return null;
+            }
+            
+            // Create connection to target peer
+            const conn = peer.connect(peerId);
+            
+            // Store connection globally
+            connection = conn;
+            window.connection = conn;
+            
+            // Setup connection event handlers
+            setupConnectionHandlers(conn);
+            
+            return conn;
+        }
+        
+        function handleIncomingConnection(conn) {
+            // Store the incoming connection
+            connection = conn;
+            window.connection = conn;
+            
+            // Setup connection event handlers
+            setupConnectionHandlers(conn);
+        }
+        
+        function setupConnectionHandlers(conn) {
+            // Handle connection open event
+            conn.on('open', handleConnectionOpen);
+            
+            // Handle incoming data (messages)
+            conn.on('data', function(data) {
+                // This will be implemented in the next task
+                console.log('Received data:', data);
+            });
+            
+            // Handle connection close event
+            conn.on('close', function() {
+                // This will be implemented in a later task
+                console.log('Connection closed');
+            });
+            
+            // Handle connection errors
+            conn.on('error', function(err) {
+                console.error('Connection error:', err);
+                addSystemMessage(`Connection error: ${err.message || err}`);
+            });
+        }
+        
+        function handleConnectionOpen() {
+            addSystemMessage('⚡ Connection established');
+            enableSendButton();
+        }
+        
+        function enableSendButton() {
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = false;
+        }
+        
+        function disableSendButton() {
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+        }
+        
+        // ===== PEERJS INITIALIZATION =====
+        
+        function initializePeer() {
+            // Create PeerJS instance with Google STUN server configuration
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            // Store peer globally for testing
+            window.peer = peer;
+            
+            // Handle peer 'open' event - when peer ID is ready
+            peer.on('open', function(id) {
+                updateMyId(id);
+                addSystemMessage('Your ID is ready; share it with your peer.');
+            });
+            
+            // Handle incoming connections
+            peer.on('connection', function(conn) {
+                handleIncomingConnection(conn);
+            });
+            
+            // Handle peer errors
+            peer.on('error', function(err) {
+                console.error('PeerJS Error:', err);
+                addSystemMessage(`Error: ${err.message || err}`);
+            });
+        }
+        
+        // ===== INITIALIZATION =====
+        
+        function setupEventListeners() {
+            // Connect button click handler
+            const connectBtn = document.getElementById('connect-btn');
+            connectBtn.addEventListener('click', handleConnectClick);
+        }
+        
+        // Initialize PeerJS when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePeer();
+            setupEventListeners();
+        });
+        
+        // Also initialize immediately if DOM is already ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initializePeer();
+                setupEventListeners();
+            });
+        } else {
+            initializePeer();
+            setupEventListeners();
+        }
+        
+        // Run tests after DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                // Display initial sync test results
+                if (totalAsyncTests === 0) {
+                    displayTestResults();
+                }
+            }, 100);
+        });
+        
+        // Also run tests immediately since DOM should be ready
+        setTimeout(() => {
+            // Display initial sync test results
+            if (totalAsyncTests === 0) {
+                displayTestResults();
+            }
+        }, 100);
+        
+    </script>
+</body>
+</html>
