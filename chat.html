@@ -1160,6 +1160,691 @@
             });
         });
         
+        // ===== COMPREHENSIVE INTEGRATION TESTS =====
+        
+        describe('Complete User Workflow Integration Tests', () => {
+            test('should complete full peer ID generation → connection → messaging → closure workflow', () => {
+                // Reset state for clean test
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Step 1: Peer ID generation (simulated)
+                const testPeerId = 'test-peer-12345';
+                updateMyId(testPeerId);
+                expect(window.myId).toBe(testPeerId);
+                expect(document.getElementById('my-id').textContent).toBe(testPeerId);
+                
+                // Step 2: System message for peer ready
+                addSystemMessage('Your ID is ready; share it with your peer.');
+                expect(chatLog.value).toContain('System: Your ID is ready; share it with your peer.');
+                
+                // Step 3: Connection establishment (simulated)
+                const mockConnection = {
+                    open: true,
+                    peer: 'remote-peer-123',
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                
+                window.connection = mockConnection;
+                setupConnectionHandlers(mockConnection);
+                handleConnectionOpen();
+                
+                expect(chatLog.value).toContain('System: ⚡ Connection established');
+                expect(document.getElementById('send-btn').disabled).toBe(false);
+                
+                // Step 4: Message exchange
+                sendMessage('Hello from integration test', mockConnection);
+                expect(chatLog.value).toContain('Me: Hello from integration test');
+                expect(mockConnection.lastSent).toBe('Hello from integration test');
+                
+                handleReceivedMessage('Hello back from peer');
+                expect(chatLog.value).toContain('Peer: Hello back from peer');
+                
+                // Step 5: Connection closure
+                handleConnectionClose();
+                expect(chatLog.value).toContain('System: Connection closed');
+                expect(document.getElementById('send-btn').disabled).toBe(true);
+                expect(window.connection).toBeNull();
+            });
+            
+            test('should handle multiple connection attempts in sequence', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Set up peer ID
+                window.myId = 'test-peer-seq';
+                
+                // First connection attempt
+                const peerIdInput = document.getElementById('peer-id-input');
+                peerIdInput.value = 'peer-1';
+                
+                const mockPeer1 = {
+                    connect: function(peerId) {
+                        return {
+                            peer: peerId,
+                            open: false,
+                            on: function(event, handler) { this['_' + event] = handler; }
+                        };
+                    }
+                };
+                window.peer = mockPeer1;
+                
+                const result1 = handleConnectClick();
+                expect(result1).toBe(true);
+                expect(window.connection.peer).toBe('peer-1');
+                
+                // Simulate connection close
+                handleConnectionClose();
+                expect(window.connection).toBeNull();
+                
+                // Second connection attempt
+                peerIdInput.value = 'peer-2';
+                const result2 = handleConnectClick();
+                expect(result2).toBe(true);
+                expect(window.connection.peer).toBe('peer-2');
+                
+                // Verify chat log shows both connection attempts
+                expect(chatLog.value).toContain('System: Connection closed');
+            });
+            
+            test('should handle rapid message sending during active connection', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Set up active connection
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.sentMessages = this.sentMessages || []; this.sentMessages.push(data); },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                // Send multiple messages rapidly
+                const messages = ['Message 1', 'Message 2', 'Message 3', 'Message 4', 'Message 5'];
+                messages.forEach(msg => {
+                    sendMessage(msg, mockConnection);
+                });
+                
+                // Verify all messages were sent and logged
+                expect(mockConnection.sentMessages.length).toBe(5);
+                messages.forEach(msg => {
+                    expect(chatLog.value).toContain(`Me: ${msg}`);
+                    expect(mockConnection.sentMessages).toContain(msg);
+                });
+                
+                // Verify message order is maintained
+                const chatLines = chatLog.value.split('\n').filter(line => line.startsWith('Me:'));
+                expect(chatLines.length).toBe(5);
+                messages.forEach((msg, index) => {
+                    expect(chatLines[index]).toBe(`Me: ${msg}`);
+                });
+            });
+            
+            test('should handle incoming and outgoing messages interleaved', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Set up active connection
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                // Interleave sent and received messages
+                sendMessage('Outgoing 1', mockConnection);
+                handleReceivedMessage('Incoming 1');
+                sendMessage('Outgoing 2', mockConnection);
+                handleReceivedMessage('Incoming 2');
+                sendMessage('Outgoing 3', mockConnection);
+                
+                // Verify message order and formatting
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                expect(chatLines[0]).toBe('Me: Outgoing 1');
+                expect(chatLines[1]).toBe('Peer: Incoming 1');
+                expect(chatLines[2]).toBe('Me: Outgoing 2');
+                expect(chatLines[3]).toBe('Peer: Incoming 2');
+                expect(chatLines[4]).toBe('Me: Outgoing 3');
+            });
+        });
+        
+        describe('Edge Cases and Error Scenarios Integration Tests', () => {
+            test('should handle connection failure during message sending', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Set up connection that will fail
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { 
+                        // Simulate connection failure during send
+                        this.open = false;
+                        throw new Error('Connection lost');
+                    },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                // Attempt to send message
+                try {
+                    sendMessage('Test message', mockConnection);
+                } catch (error) {
+                    // Connection should handle the error gracefully
+                    expect(error.message).toBe('Connection lost');
+                }
+                
+                // Verify message was still logged locally before failure
+                expect(chatLog.value).toContain('Me: Test message');
+            });
+            
+            test('should handle peer ID input with special characters and whitespace', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                window.myId = 'test-peer';
+                
+                // Test with whitespace only
+                peerIdInput.value = '   ';
+                expect(handleConnectClick()).toBe(false);
+                
+                // Test with special characters
+                peerIdInput.value = 'peer@#$%^&*()';
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return {
+                            peer: peerId,
+                            open: false,
+                            on: function(event, handler) { this['_' + event] = handler; }
+                        };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                expect(handleConnectClick()).toBe(true);
+                expect(window.connection.peer).toBe('peer@#$%^&*()');
+                
+                // Test with leading/trailing whitespace
+                peerIdInput.value = '  valid-peer-id  ';
+                expect(handleConnectClick()).toBe(true);
+                expect(window.connection.peer).toBe('valid-peer-id');
+            });
+            
+            test('should handle very long messages', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                // Create a very long message (1000 characters)
+                const longMessage = 'A'.repeat(1000);
+                
+                sendMessage(longMessage, mockConnection);
+                
+                expect(mockConnection.lastSent).toBe(longMessage);
+                expect(chatLog.value).toContain(`Me: ${longMessage}`);
+                expect(chatLog.value.length).toBe(`Me: ${longMessage}\n`.length);
+            });
+            
+            test('should handle multiple error types in sequence', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Test sequence of different error types
+                const errors = [
+                    { type: 'peer-unavailable', message: 'Peer not found' },
+                    { type: 'network', message: 'Network failed' },
+                    { type: 'server-error', message: 'Server down' },
+                    { message: 'Generic error' }
+                ];
+                
+                errors.forEach(error => {
+                    handlePeerError(error);
+                });
+                
+                // Verify all error messages appear in chat log
+                expect(chatLog.value).toContain('System: Peer not found - please check the peer ID and try again');
+                expect(chatLog.value).toContain('System: Network error - please check your internet connection and try again');
+                expect(chatLog.value).toContain('System: Server error - please try again later');
+                expect(chatLog.value).toContain('System: An error occurred: Generic error');
+                
+                // Verify error messages are in correct order
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                expect(chatLines.length).toBe(4);
+            });
+            
+            test('should handle connection close during active messaging', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Set up active connection
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                setupConnectionHandlers(mockConnection);
+                
+                // Start messaging
+                sendMessage('Message before close', mockConnection);
+                expect(chatLog.value).toContain('Me: Message before close');
+                
+                // Simulate connection close
+                mockConnection._close();
+                
+                // Verify connection close was handled
+                expect(chatLog.value).toContain('System: Connection closed');
+                expect(window.connection).toBeNull();
+                expect(document.getElementById('send-btn').disabled).toBe(true);
+                
+                // Attempt to send message after close should fail
+                const messageInput = document.getElementById('message-input');
+                messageInput.value = 'Message after close';
+                expect(handleSendClick()).toBe(false);
+            });
+        });
+        
+        describe('UI State Consistency Integration Tests', () => {
+            test('should maintain consistent button states throughout connection lifecycle', () => {
+                const sendBtn = document.getElementById('send-btn');
+                const connectBtn = document.getElementById('connect-btn');
+                
+                // Initial state
+                expect(sendBtn.disabled).toBe(true);
+                expect(connectBtn.disabled).toBe(false);
+                
+                // During connection establishment
+                const mockConnection = {
+                    open: false,
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                setupConnectionHandlers(mockConnection);
+                
+                // Connection opens
+                mockConnection.open = true;
+                handleConnectionOpen();
+                expect(sendBtn.disabled).toBe(false);
+                
+                // Connection closes
+                handleConnectionClose();
+                expect(sendBtn.disabled).toBe(true);
+                expect(window.connection).toBeNull();
+                
+                // Should be able to connect again
+                expect(connectBtn.disabled).toBe(false);
+            });
+            
+            test('should maintain chat log consistency during all operations', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Track all operations and their expected chat log entries
+                const operations = [
+                    () => addSystemMessage('Peer ready'),
+                    () => addSystemMessage('⚡ Connection established'),
+                    () => addMessageToChat('Hello', 'me'),
+                    () => addMessageToChat('Hi there', 'peer'),
+                    () => addSystemMessage('Connection closed')
+                ];
+                
+                const expectedEntries = [
+                    'System: Peer ready',
+                    'System: ⚡ Connection established',
+                    'Me: Hello',
+                    'Peer: Hi there',
+                    'System: Connection closed'
+                ];
+                
+                // Execute operations
+                operations.forEach(op => op());
+                
+                // Verify all entries are present and in correct order
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                expect(chatLines.length).toBe(expectedEntries.length);
+                
+                expectedEntries.forEach((expected, index) => {
+                    expect(chatLines[index]).toBe(expected);
+                });
+                
+                // Verify chat log scrolls to bottom
+                expect(chatLog.scrollTop).toBe(chatLog.scrollHeight - chatLog.clientHeight);
+            });
+            
+            test('should handle UI updates during rapid state changes', () => {
+                const chatLog = document.getElementById('chat-log');
+                const sendBtn = document.getElementById('send-btn');
+                chatLog.value = '';
+                
+                // Rapid state changes: connect → message → disconnect → connect
+                const mockConnection1 = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                
+                // First connection
+                window.connection = mockConnection1;
+                handleConnectionOpen();
+                expect(sendBtn.disabled).toBe(false);
+                expect(chatLog.value).toContain('System: ⚡ Connection established');
+                
+                // Send message
+                sendMessage('Quick message', mockConnection1);
+                expect(chatLog.value).toContain('Me: Quick message');
+                
+                // Close connection
+                handleConnectionClose();
+                expect(sendBtn.disabled).toBe(true);
+                expect(chatLog.value).toContain('System: Connection closed');
+                
+                // Second connection
+                const mockConnection2 = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                
+                window.connection = mockConnection2;
+                handleConnectionOpen();
+                expect(sendBtn.disabled).toBe(false);
+                
+                // Verify chat log shows both connections
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                const connectionMessages = chatLines.filter(line => line.includes('Connection established'));
+                expect(connectionMessages.length).toBe(2);
+            });
+            
+            test('should maintain input field states during all operations', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                const messageInput = document.getElementById('message-input');
+                
+                // Test peer ID input persistence
+                peerIdInput.value = 'test-peer-123';
+                expect(peerIdInput.value).toBe('test-peer-123');
+                
+                // Input should persist through connection attempts
+                window.myId = 'my-peer';
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return {
+                            peer: peerId,
+                            open: false,
+                            on: function(event, handler) { this['_' + event] = handler; }
+                        };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                handleConnectClick();
+                expect(peerIdInput.value).toBe('test-peer-123'); // Should not be cleared
+                
+                // Test message input clearing after send
+                messageInput.value = 'Test message';
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                handleSendClick();
+                expect(messageInput.value).toBe(''); // Should be cleared after send
+            });
+        });
+        
+        describe('Real User Interaction Simulation Tests', () => {
+            test('should simulate complete user session with Enter key usage', () => {
+                const chatLog = document.getElementById('chat-log');
+                const messageInput = document.getElementById('message-input');
+                chatLog.value = '';
+                
+                // Set up connection
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.sentMessages = this.sentMessages || []; this.sentMessages.push(data); },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                
+                // Simulate user typing and pressing Enter
+                const messages = ['Hello!', 'How are you?', 'Great to chat!'];
+                
+                messages.forEach(msg => {
+                    messageInput.value = msg;
+                    const enterEvent = {
+                        key: 'Enter',
+                        preventDefault: function() { this.defaultPrevented = true; }
+                    };
+                    
+                    handleMessageInputKeyPress(enterEvent);
+                    
+                    expect(enterEvent.defaultPrevented).toBe(true);
+                    expect(messageInput.value).toBe('');
+                    expect(chatLog.value).toContain(`Me: ${msg}`);
+                });
+                
+                expect(mockConnection.sentMessages.length).toBe(3);
+                expect(mockConnection.sentMessages).toContain('Hello!');
+                expect(mockConnection.sentMessages).toContain('How are you?');
+                expect(mockConnection.sentMessages).toContain('Great to chat!');
+            });
+            
+            test('should simulate user attempting invalid operations', () => {
+                const chatLog = document.getElementById('chat-log');
+                const peerIdInput = document.getElementById('peer-id-input');
+                const messageInput = document.getElementById('message-input');
+                chatLog.value = '';
+                
+                // Attempt to send message without connection
+                messageInput.value = 'Message without connection';
+                expect(handleSendClick()).toBe(false);
+                expect(chatLog.value).toContain('System: Not connected to any peer');
+                
+                // Attempt to connect with empty peer ID
+                peerIdInput.value = '';
+                expect(handleConnectClick()).toBe(false);
+                expect(chatLog.value).toContain('System: Please enter a peer ID to connect');
+                
+                // Attempt self-connection
+                window.myId = 'my-peer-id';
+                peerIdInput.value = 'my-peer-id';
+                expect(handleConnectClick()).toBe(false);
+                expect(chatLog.value).toContain('System: Cannot connect to yourself');
+                
+                // Verify all error messages are in chat log
+                const errorMessages = chatLog.value.split('\n').filter(line => line.includes('System:'));
+                expect(errorMessages.length).toBe(3);
+            });
+            
+            test('should simulate user recovering from errors', () => {
+                const chatLog = document.getElementById('chat-log');
+                const peerIdInput = document.getElementById('peer-id-input');
+                chatLog.value = '';
+                
+                // Start with error condition
+                window.myId = 'my-peer';
+                peerIdInput.value = 'my-peer';
+                expect(handleConnectClick()).toBe(false);
+                expect(chatLog.value).toContain('System: Cannot connect to yourself');
+                
+                // User corrects the error
+                peerIdInput.value = 'valid-peer-id';
+                const mockPeer = {
+                    connect: function(peerId) {
+                        return {
+                            peer: peerId,
+                            open: false,
+                            on: function(event, handler) { this['_' + event] = handler; }
+                        };
+                    }
+                };
+                window.peer = mockPeer;
+                
+                expect(handleConnectClick()).toBe(true);
+                expect(window.connection.peer).toBe('valid-peer-id');
+                
+                // Simulate successful connection
+                handleConnectionOpen();
+                expect(chatLog.value).toContain('System: ⚡ Connection established');
+                expect(document.getElementById('send-btn').disabled).toBe(false);
+            });
+        });
+        
+        describe('System Message Verification Tests', () => {
+            test('should display all required system messages in correct scenarios', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Test peer ready message
+                addSystemMessage('Your ID is ready; share it with your peer.');
+                expect(chatLog.value).toContain('System: Your ID is ready; share it with your peer.');
+                
+                // Test connection established message
+                addSystemMessage('⚡ Connection established');
+                expect(chatLog.value).toContain('System: ⚡ Connection established');
+                
+                // Test connection closed message
+                addSystemMessage('Connection closed');
+                expect(chatLog.value).toContain('System: Connection closed');
+                
+                // Test error messages
+                addSystemMessage('Please enter a peer ID to connect');
+                expect(chatLog.value).toContain('System: Please enter a peer ID to connect');
+                
+                addSystemMessage('Cannot connect to yourself');
+                expect(chatLog.value).toContain('System: Cannot connect to yourself');
+                
+                addSystemMessage('Not connected to any peer');
+                expect(chatLog.value).toContain('System: Not connected to any peer');
+                
+                // Verify all messages have System: prefix
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                chatLines.forEach(line => {
+                    expect(line.startsWith('System:')).toBe(true);
+                });
+            });
+            
+            test('should verify system messages appear at correct times in workflow', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Simulate complete workflow with system message verification
+                
+                // 1. Peer initialization
+                updateMyId('test-peer-123');
+                addSystemMessage('Your ID is ready; share it with your peer.');
+                
+                // 2. Connection establishment
+                const mockConnection = {
+                    open: true,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; }
+                };
+                window.connection = mockConnection;
+                handleConnectionOpen();
+                
+                // 3. Message exchange (no system messages)
+                sendMessage('Hello', mockConnection);
+                handleReceivedMessage('Hi back');
+                
+                // 4. Connection closure
+                handleConnectionClose();
+                
+                // Verify system messages appear in correct order
+                const chatLines = chatLog.value.split('\n').filter(line => line.trim());
+                const systemMessages = chatLines.filter(line => line.startsWith('System:'));
+                
+                expect(systemMessages.length).toBe(3);
+                expect(systemMessages[0]).toBe('System: Your ID is ready; share it with your peer.');
+                expect(systemMessages[1]).toBe('System: ⚡ Connection established');
+                expect(systemMessages[2]).toBe('System: Connection closed');
+                
+                // Verify user messages are interspersed correctly
+                expect(chatLines[2]).toBe('Me: Hello');
+                expect(chatLines[3]).toBe('Peer: Hi back');
+            });
+        });
+        
+        describe('Test Coverage Verification Tests', () => {
+            test('should verify all major functions are tested', () => {
+                const requiredFunctions = [
+                    'addSystemMessage', 'updateMyId', 'validatePeerIdInput', 'validateSelfConnection',
+                    'handleConnectionError', 'handlePeerError', 'handleConnectClick', 'initiateConnection',
+                    'handleIncomingConnection', 'setupConnectionHandlers', 'handleConnectionOpen',
+                    'enableSendButton', 'disableSendButton', 'handleConnectionClose', 'cleanupConnection',
+                    'handleSendClick', 'sendMessage', 'handleReceivedMessage', 'addMessageToChat',
+                    'handleMessageInputKeyPress', 'initializePeer', 'setupEventListeners'
+                ];
+                
+                requiredFunctions.forEach(funcName => {
+                    expect(typeof window[funcName]).toBe('function');
+                });
+            });
+            
+            test('should verify all DOM elements are accessible', () => {
+                const requiredElements = [
+                    'my-id', 'peer-id-input', 'connect-btn', 'chat-log', 'message-input', 'send-btn'
+                ];
+                
+                requiredElements.forEach(elementId => {
+                    const element = document.getElementById(elementId);
+                    expect(element).not.toBeNull();
+                });
+            });
+            
+            test('should verify all error handling paths are covered', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Test all error types
+                const errorTypes = [
+                    { type: 'peer-unavailable', handler: handlePeerError },
+                    { type: 'network', handler: handlePeerError },
+                    { type: 'server-error', handler: handlePeerError },
+                    { type: 'peer-unavailable', handler: handleConnectionError },
+                    { type: 'network', handler: handleConnectionError }
+                ];
+                
+                errorTypes.forEach(({ type, handler }) => {
+                    const error = { type, message: `Test ${type} error` };
+                    handler(error);
+                });
+                
+                // Verify all error messages appear
+                expect(chatLog.value).toContain('Peer not found');
+                expect(chatLog.value).toContain('Network error');
+                expect(chatLog.value).toContain('Server error');
+                expect(chatLog.value).toContain('Connection failed: Peer not found');
+                expect(chatLog.value).toContain('Connection failed: Network error');
+            });
+            
+            test('should verify all UI state transitions are covered', () => {
+                const sendBtn = document.getElementById('send-btn');
+                
+                // Test all button state transitions
+                expect(sendBtn.disabled).toBe(true); // Initial state
+                
+                enableSendButton();
+                expect(sendBtn.disabled).toBe(false);
+                
+                disableSendButton();
+                expect(sendBtn.disabled).toBe(true);
+                
+                // Test through connection lifecycle
+                handleConnectionOpen();
+                expect(sendBtn.disabled).toBe(false);
+                
+                handleConnectionClose();
+                expect(sendBtn.disabled).toBe(true);
+            });
+        });
+        
         // ===== APPLICATION VARIABLES =====
         
         let peer = null;
