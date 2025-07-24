@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC PeerJS Chat - Simple</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        
+        input, button, textarea {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        #chat-log {
+            width: 100%;
+            height: 200px;
+            resize: vertical;
+            font-family: monospace;
+            background-color: #f8f9fa;
+        }
+        
+        #my-id {
+            font-weight: bold;
+            color: #28a745;
+            padding: 5px;
+            background-color: #d4edda;
+            border-radius: 4px;
+        }
+        
+        .test-results {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-pass {
+            color: #28a745;
+        }
+        
+        .test-fail {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC PeerJS Chat</h1>
+        
+        <div class="section">
+            <h3>Your Peer ID</h3>
+            <div id="my-id">Connecting...</div>
+        </div>
+        
+        <div class="section">
+            <h3>Connect to Peer</h3>
+            <input type="text" id="peer-id-input" placeholder="Enter peer ID to connect">
+            <button id="connect-btn">Connect</button>
+        </div>
+        
+        <div class="section">
+            <h3>Chat</h3>
+            <textarea id="chat-log" readonly placeholder="Chat messages will appear here..."></textarea>
+            <div>
+                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="send-btn" disabled>Send</button>
+            </div>
+        </div>
+        
+        <div class="test-results">
+            <h3>Test Results</h3>
+            <div id="test-output">Tests will run when page loads...</div>
+        </div>
+    </div>
+
+    <!-- PeerJS Library -->
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    
+    <script>
+        // ===== APPLICATION VARIABLES =====
+        
+        let peer = null;
+        let connection = null;
+        let myId = null;
+        
+        // Expose variables globally for testing
+        window.peer = peer;
+        window.connection = connection;
+        window.myId = myId;
+        
+        // ===== HELPER FUNCTIONS =====
+        
+        function addSystemMessage(message) {
+            addMessageToChat(message, 'system');
+        }
+        
+        function updateMyId(id) {
+            const myIdElement = document.getElementById('my-id');
+            myIdElement.textContent = id;
+            myId = id;
+            window.myId = id;
+        }
+        
+        function addMessageToChat(message, sender) {
+            const chatLog = document.getElementById('chat-log');
+            let prefix;
+            
+            switch (sender) {
+                case 'me':
+                    prefix = 'Me:';
+                    break;
+                case 'peer':
+                    prefix = 'Peer:';
+                    break;
+                case 'system':
+                    prefix = 'System:';
+                    break;
+                default:
+                    prefix = 'Unknown:';
+            }
+            
+            const formattedMessage = `${prefix} ${message}\n`;
+            chatLog.value += formattedMessage;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        
+        function enableSendButton() {
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = false;
+        }
+        
+        function disableSendButton() {
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+        }
+        
+        // ===== CONNECTION FUNCTIONS =====
+        
+        function handleConnectClick() {
+            const peerIdInput = document.getElementById('peer-id-input');
+            const targetPeerId = peerIdInput.value.trim();
+            
+            if (!targetPeerId) {
+                addSystemMessage('Please enter a peer ID to connect');
+                return false;
+            }
+            
+            if (targetPeerId === myId) {
+                addSystemMessage('Cannot connect to yourself');
+                return false;
+            }
+            
+            if (!peer) {
+                addSystemMessage('Peer not initialized');
+                return false;
+            }
+            
+            const conn = peer.connect(targetPeerId);
+            connection = conn;
+            window.connection = conn;
+            
+            setupConnectionHandlers(conn);
+            return true;
+        }
+        
+        function setupConnectionHandlers(conn) {
+            conn.on('open', function() {
+                addSystemMessage('⚡ Connection established');
+                enableSendButton();
+            });
+            
+            conn.on('data', function(data) {
+                addMessageToChat(data, 'peer');
+            });
+            
+            conn.on('close', function() {
+                addSystemMessage('Connection closed');
+                disableSendButton();
+                connection = null;
+                window.connection = null;
+            });
+            
+            conn.on('error', function(err) {
+                console.error('Connection error:', err);
+                addSystemMessage(`Connection error: ${err.message || 'Unknown error'}`);
+            });
+        }
+        
+        function handleIncomingConnection(conn) {
+            connection = conn;
+            window.connection = conn;
+            setupConnectionHandlers(conn);
+        }
+        
+        // ===== MESSAGE FUNCTIONS =====
+        
+        function handleSendClick() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                return false;
+            }
+            
+            if (!connection || !connection.open) {
+                addSystemMessage('Not connected to any peer');
+                return false;
+            }
+            
+            connection.send(message);
+            addMessageToChat(message, 'me');
+            messageInput.value = '';
+            return true;
+        }
+        
+        function handleMessageInputKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleSendClick();
+            }
+        }
+        
+        // ===== PEERJS INITIALIZATION =====
+        
+        function initializePeer() {
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            window.peer = peer;
+            
+            peer.on('open', function(id) {
+                updateMyId(id);
+                addSystemMessage('Your ID is ready; share it with your peer.');
+            });
+            
+            peer.on('connection', function(conn) {
+                handleIncomingConnection(conn);
+            });
+            
+            peer.on('error', function(err) {
+                console.error('PeerJS Error:', err);
+                addSystemMessage(`Error: ${err.message || 'Unknown error'}`);
+            });
+        }
+        
+        // ===== EVENT LISTENERS SETUP =====
+        
+        function setupEventListeners() {
+            const connectBtn = document.getElementById('connect-btn');
+            connectBtn.addEventListener('click', handleConnectClick);
+            
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.addEventListener('click', handleSendClick);
+            
+            const messageInput = document.getElementById('message-input');
+            messageInput.addEventListener('keypress', handleMessageInputKeyPress);
+        }
+        
+        // ===== SIMPLE TESTS =====
+        
+        function runSimpleTests() {
+            const testOutput = document.getElementById('test-output');
+            let results = [];
+            
+            try {
+                // Test DOM elements exist
+                const elements = ['my-id', 'peer-id-input', 'connect-btn', 'chat-log', 'message-input', 'send-btn'];
+                elements.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        results.push(`✓ Element ${id} exists`);
+                    } else {
+                        results.push(`✗ Element ${id} missing`);
+                    }
+                });
+                
+                // Test functions exist
+                const functions = ['addSystemMessage', 'updateMyId', 'handleConnectClick', 'handleSendClick'];
+                functions.forEach(funcName => {
+                    if (typeof window[funcName] === 'function') {
+                        results.push(`✓ Function ${funcName} defined`);
+                    } else {
+                        results.push(`✗ Function ${funcName} missing`);
+                    }
+                });
+                
+                // Test PeerJS loaded
+                if (typeof Peer !== 'undefined') {
+                    results.push('✓ PeerJS library loaded');
+                } else {
+                    results.push('✗ PeerJS library failed to load');
+                }
+                
+                testOutput.innerHTML = results.join('<br>');
+                
+            } catch (error) {
+                testOutput.innerHTML = `<span style="color: red;">Test error: ${error.message}</span>`;
+            }
+        }
+        
+        // ===== APPLICATION INITIALIZATION =====
+        
+        function initializeApplication() {
+            initializePeer();
+            setupEventListeners();
+            
+            // Run tests after a short delay
+            setTimeout(runSimpleTests, 1000);
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApplication);
+        } else {
+            initializeApplication();
+        }
+        
+    </script>
+</body>
+</html>
