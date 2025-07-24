@@ -10,7 +10,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a user, I want to see my unique peer ID when the page loads, so that I can share it with another person to establish a chat connection.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 1
 
 1. WHEN the page loads THEN the system SHALL instantiate a new Peer() with default PeerJS cloud server and STUN server stun:stun.l.google.com:19302
 2. WHEN the peer connection is ready THEN the system SHALL display the auto-assigned peer ID in an element with id "my-id"
@@ -20,7 +20,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a user, I want to connect to another peer using their ID, so that we can start chatting directly.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 2
 
 1. WHEN the page loads THEN the system SHALL provide an input field with id "peer-id-input" for entering another peer's ID
 2. WHEN the page loads THEN the system SHALL provide a "Connect" button to initiate connection to the entered peer ID
@@ -32,7 +32,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a user, I want to send and receive text messages in real-time, so that I can have a conversation with the connected peer.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 3
 
 1. WHEN the page loads THEN the system SHALL provide a textarea with id "chat-log" to display message history
 2. WHEN the page loads THEN the system SHALL provide a message input field and "Send" button for composing messages
@@ -46,7 +46,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a user, I want to be notified when the connection is closed, so that I know the chat session has ended.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 4
 
 1. WHEN the connection is closed (by either peer) THEN the system SHALL display "System: Connection closed" in the chat log
 2. WHEN the connection is closed THEN the system SHALL disable the Send button
@@ -56,7 +56,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a developer, I want the application to be self-contained with no build dependencies, so that it can be easily deployed and run anywhere.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 5
 
 1. WHEN the application is created THEN it SHALL be contained in a single HTML file named "chat.html"
 2. WHEN the application is created THEN all JavaScript logic SHALL be contained within a single script tag
@@ -70,7 +70,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a user, I want the interface to be clean and functional, so that I can focus on the chat functionality without distractions.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 6
 
 1. WHEN the page loads THEN the system SHALL display a minimal, readable interface
 2. WHEN the page loads THEN all UI elements SHALL be properly labeled and accessible
@@ -81,7 +81,7 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 
 **User Story:** As a developer, I want comprehensive test coverage for all functionality, so that the application is reliable and maintainable.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 7
 
 1. WHEN developing the application THEN all functionality SHALL be developed using Test-Driven Development (TDD) methodology
 2. WHEN the application is complete THEN it SHALL have 100% unit test coverage for all JavaScript functions

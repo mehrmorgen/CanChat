@@ -18,6 +18,7 @@ graph TB
 ```
 
 The architecture follows a simple peer-to-peer model:
+
 1. **Signaling Phase**: Both peers connect to PeerJS cloud server to exchange connection metadata
 2. **NAT Traversal**: Google STUN server helps establish direct connection through NATs/firewalls
 3. **Direct Communication**: Once established, messages flow directly between peers without intermediaries
@@ -25,6 +26,7 @@ The architecture follows a simple peer-to-peer model:
 ### Application Structure
 
 The application consists of a single HTML file with three main sections:
+
 - **HTML Structure**: Minimal DOM elements for the chat interface
 - **CSS Styling**: Inline styles for basic presentation
 - **JavaScript Logic**: All functionality contained in one script block
@@ -34,21 +36,27 @@ The application consists of a single HTML file with three main sections:
 ### Core Components
 
 #### 1. PeerJS Connection Manager
+
 **Responsibility**: Manages WebRTC peer connections and signaling
+
 - Initializes PeerJS instance with cloud server and STUN configuration
 - Handles peer ID generation and display
 - Manages connection establishment (both outgoing and incoming)
 - Handles connection lifecycle events
 
 #### 2. Chat Interface Controller
+
 **Responsibility**: Manages UI interactions and state
+
 - Updates chat log with messages and system notifications
 - Handles user input for peer ID and messages
 - Manages button states (enabled/disabled)
 - Provides visual feedback for connection status
 
 #### 3. Message Handler
+
 **Responsibility**: Processes message sending and receiving
+
 - Formats outgoing messages
 - Processes incoming messages
 - Updates chat log with appropriate prefixes
@@ -57,6 +65,7 @@ The application consists of a single HTML file with three main sections:
 ### Interface Definitions
 
 #### DOM Elements Interface
+
 ```javascript
 // Required DOM elements with specific IDs
 {
@@ -70,6 +79,7 @@ The application consists of a single HTML file with three main sections:
 ```
 
 #### PeerJS Events Interface
+
 ```javascript
 // Key PeerJS events to handle
 {
@@ -82,6 +92,7 @@ The application consists of a single HTML file with three main sections:
 ```
 
 #### Connection Events Interface
+
 ```javascript
 // DataConnection events
 {
@@ -95,6 +106,7 @@ The application consists of a single HTML file with three main sections:
 ## Data Models
 
 ### Message Model
+
 ```javascript
 // Internal message representation
 {
@@ -106,6 +118,7 @@ The application consists of a single HTML file with three main sections:
 ```
 
 ### Connection State Model
+
 ```javascript
 // Application connection state
 {
@@ -118,6 +131,7 @@ The application consists of a single HTML file with three main sections:
 ```
 
 ### UI State Model
+
 ```javascript
 // Interface state management
 {
@@ -130,16 +144,19 @@ The application consists of a single HTML file with three main sections:
 ## Error Handling
 
 ### Connection Errors
+
 - **Peer ID Not Found**: Display "System: Peer not found" when attempting to connect to non-existent peer
 - **Connection Failed**: Show "System: Connection failed" for network or WebRTC errors
 - **Signaling Errors**: Handle PeerJS server connectivity issues gracefully
 
 ### Input Validation
+
 - **Empty Peer ID**: Prevent connection attempts with empty peer ID input
 - **Self-Connection**: Prevent users from connecting to their own peer ID
 - **Invalid Characters**: Handle special characters in peer IDs appropriately
 
 ### Network Resilience
+
 - **Connection Drops**: Detect and notify when connection is lost
 - **Reconnection**: Allow users to establish new connections after failures
 - **Timeout Handling**: Set reasonable timeouts for connection attempts
@@ -157,12 +174,14 @@ The application will be developed using strict TDD methodology:
 ### Testing Framework Integration
 
 #### In-Browser Testing Setup
+
 - **Framework**: Jest testing library loaded via CDN
 - **Test Organization**: All tests contained within the single HTML file
 - **Test Execution**: Tests run directly in the browser environment
 - **Coverage Reporting**: 100% code coverage verification for all JavaScript functions
 
 #### Test Structure
+
 ```javascript
 // Test organization within the HTML file
 <script>
@@ -176,6 +195,7 @@ The application will be developed using strict TDD methodology:
 ### Comprehensive Test Coverage
 
 #### Unit Tests (100% Coverage Required)
+
 1. **PeerJS Initialization Tests**
    - Peer instance creation with correct configuration
    - STUN server configuration validation
@@ -207,6 +227,7 @@ The application will be developed using strict TDD methodology:
    - Graceful degradation
 
 #### Integration Tests
+
 1. **Complete User Workflows**
    - Full connection establishment flow
    - End-to-end message exchange
@@ -220,6 +241,7 @@ The application will be developed using strict TDD methodology:
    - Error state handling and recovery
 
 #### Edge Case Testing
+
 1. **Network Scenarios**
    - Connection timeouts
    - Network interruptions
@@ -235,12 +257,14 @@ The application will be developed using strict TDD methodology:
 ### Manual Testing Scenarios
 
 #### Browser Compatibility Validation
+
 1. **Chrome/Chromium**: Primary testing target with full feature validation
 2. **Firefox**: Secondary compatibility verification
 3. **Safari**: WebRTC compatibility and performance check
 4. **Mobile Browsers**: Basic functionality and responsive design validation
 
 #### Real-World Testing
+
 1. **Multi-Device Testing**: Test connections between different devices
 2. **Network Conditions**: Test under various network conditions
 3. **Performance Testing**: Verify performance with extended chat sessions
@@ -249,12 +273,14 @@ The application will be developed using strict TDD methodology:
 ### Continuous Integration Approach
 
 #### Version Control Integration
+
 - **Commit Strategy**: Commit after each completed task with full test coverage
 - **Commit Messages**: Descriptive messages indicating functionality and test coverage
 - **Test Validation**: All tests must pass before each commit
 - **Coverage Verification**: 100% coverage maintained throughout development
 
 #### Test Execution Strategy
+
 - **Development Testing**: Tests run continuously during development
 - **Pre-Commit Testing**: Full test suite execution before each commit
 - **Cross-Browser Testing**: Periodic validation across supported browsers
@@ -263,25 +289,30 @@ The application will be developed using strict TDD methodology:
 ## Implementation Notes
 
 ### Security Considerations
+
 - **No Authentication**: Application provides no user authentication (by design for simplicity)
 - **Public Peer IDs**: Peer IDs are not secret and can be shared openly
 - **Message Privacy**: Messages are encrypted by WebRTC but not additionally secured
 - **STUN Server**: Uses Google's public STUN server (no privacy guarantees)
 
 ### Performance Considerations
+
 - **Single Connection**: Application supports only one active connection at a time
 - **Message History**: Chat log stored only in DOM (not persistent)
 - **Memory Usage**: Minimal footprint with no external dependencies
 - **Network Usage**: Direct P2P reduces server load after connection establishment
 
 ### Browser Requirements
+
 - **WebRTC Support**: Modern browser with WebRTC DataChannel support
 - **JavaScript**: ES6+ features may be used for cleaner code
 - **HTTPS**: Required for WebRTC in production environments
 - **Local Testing**: Can run via file:// protocol for development
 
 ### Code Organization
+
 The JavaScript code will be organized into logical sections with clear comments:
+
 1. **Testing Framework Setup**: Jest testing library initialization
 2. **Test Suites**: Comprehensive unit and integration tests with 100% coverage
 3. **Configuration & Setup**: PeerJS initialization and STUN configuration
@@ -292,7 +323,9 @@ The JavaScript code will be organized into logical sections with clear comments:
 8. **Test Execution**: Automated test running and coverage reporting
 
 ### Development Methodology
+
 The application follows Test-Driven Development (TDD) principles:
+
 - **Test First**: All functionality is defined by tests before implementation
 - **Minimal Implementation**: Code is written to satisfy tests with minimal complexity
 - **Continuous Refactoring**: Code quality is improved while maintaining test coverage
