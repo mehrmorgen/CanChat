@@ -733,6 +733,161 @@
             });
         });
         
+        // ===== INPUT VALIDATION AND ERROR HANDLING TESTS (FAILING) =====
+        
+        describe('Empty Peer ID Validation Tests', () => {
+            test('should have validatePeerIdInput function defined', () => {
+                expect(typeof validatePeerIdInput).toBe('function');
+            });
+            
+            test('should return false for empty peer ID', () => {
+                const result = validatePeerIdInput('');
+                expect(result).toBe(false);
+            });
+            
+            test('should return false for whitespace-only peer ID', () => {
+                const result = validatePeerIdInput('   ');
+                expect(result).toBe(false);
+            });
+            
+            test('should return true for valid peer ID', () => {
+                const result = validatePeerIdInput('valid-peer-id');
+                expect(result).toBe(true);
+            });
+            
+            test('should show error message for empty peer ID in connect handler', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                peerIdInput.value = '';
+                handleConnectClick();
+                
+                expect(chatLog.value).toContain('System: Please enter a peer ID to connect');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Please enter a peer ID to connect\n'.length);
+            });
+        });
+        
+        describe('Self-Connection Prevention Tests', () => {
+            test('should have validateSelfConnection function defined', () => {
+                expect(typeof validateSelfConnection).toBe('function');
+            });
+            
+            test('should return false when trying to connect to self', () => {
+                window.myId = 'test-peer-id';
+                const result = validateSelfConnection('test-peer-id');
+                expect(result).toBe(false);
+            });
+            
+            test('should return true when connecting to different peer', () => {
+                window.myId = 'my-peer-id';
+                const result = validateSelfConnection('other-peer-id');
+                expect(result).toBe(true);
+            });
+            
+            test('should show error message for self-connection attempt', () => {
+                const peerIdInput = document.getElementById('peer-id-input');
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                window.myId = 'test-peer-id';
+                peerIdInput.value = 'test-peer-id';
+                handleConnectClick();
+                
+                expect(chatLog.value).toContain('System: Cannot connect to yourself');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Cannot connect to yourself\n'.length);
+            });
+        });
+        
+        describe('Connection Failure Error Handling Tests', () => {
+            test('should have handleConnectionError function defined', () => {
+                expect(typeof handleConnectionError).toBe('function');
+            });
+            
+            test('should display user-friendly error message for connection failures', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { type: 'peer-unavailable', message: 'Could not connect to peer' };
+                handleConnectionError(mockError);
+                
+                expect(chatLog.value).toContain('System: Connection failed: Peer not found or unavailable');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Connection failed: Peer not found or unavailable\n'.length);
+            });
+            
+            test('should handle network error with appropriate message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { type: 'network', message: 'Network error occurred' };
+                handleConnectionError(mockError);
+                
+                expect(chatLog.value).toContain('System: Connection failed: Network error - please check your internet connection');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Connection failed: Network error - please check your internet connection\n'.length);
+            });
+            
+            test('should handle generic connection error with fallback message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { message: 'Unknown error' };
+                handleConnectionError(mockError);
+                
+                expect(chatLog.value).toContain('System: Connection failed: Unknown error');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Connection failed: Unknown error\n'.length);
+            });
+        });
+        
+        describe('PeerJS Error Handling Tests', () => {
+            test('should have handlePeerError function defined', () => {
+                expect(typeof handlePeerError).toBe('function');
+            });
+            
+            test('should handle peer-unavailable error with user-friendly message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { type: 'peer-unavailable', message: 'Could not connect to peer' };
+                handlePeerError(mockError);
+                
+                expect(chatLog.value).toContain('System: Peer not found - please check the peer ID and try again');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Peer not found - please check the peer ID and try again\n'.length);
+            });
+            
+            test('should handle network error with user-friendly message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { type: 'network', message: 'Network connection failed' };
+                handlePeerError(mockError);
+                
+                expect(chatLog.value).toContain('System: Network error - please check your internet connection and try again');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Network error - please check your internet connection and try again\n'.length);
+            });
+            
+            test('should handle server-error with user-friendly message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { type: 'server-error', message: 'PeerJS server error' };
+                handlePeerError(mockError);
+                
+                expect(chatLog.value).toContain('System: Server error - please try again later');
+                expect(chatLog.value.length).toBe(initialLength + 'System: Server error - please try again later\n'.length);
+            });
+            
+            test('should handle generic PeerJS error with fallback message', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                const mockError = { message: 'Generic PeerJS error' };
+                handlePeerError(mockError);
+                
+                expect(chatLog.value).toContain('System: An error occurred: Generic PeerJS error');
+                expect(chatLog.value.length).toBe(initialLength + 'System: An error occurred: Generic PeerJS error\n'.length);
+            });
+        });
+        
         // ===== CONNECTION CLOSURE TESTS =====
         
         describe('Connection Close Event Handler Tests', () => {
@@ -863,20 +1018,69 @@
             window.myId = id; // Update global for testing
         }
         
+        // ===== INPUT VALIDATION FUNCTIONS =====
+        
+        function validatePeerIdInput(peerId) {
+            return peerId && peerId.trim().length > 0;
+        }
+        
+        function validateSelfConnection(targetPeerId) {
+            return targetPeerId !== myId;
+        }
+        
+        // ===== ERROR HANDLING FUNCTIONS =====
+        
+        function handleConnectionError(error) {
+            let userMessage;
+            
+            switch (error.type) {
+                case 'peer-unavailable':
+                    userMessage = 'Connection failed: Peer not found or unavailable';
+                    break;
+                case 'network':
+                    userMessage = 'Connection failed: Network error - please check your internet connection';
+                    break;
+                default:
+                    userMessage = `Connection failed: ${error.message || 'Unknown error'}`;
+            }
+            
+            addSystemMessage(userMessage);
+        }
+        
+        function handlePeerError(error) {
+            let userMessage;
+            
+            switch (error.type) {
+                case 'peer-unavailable':
+                    userMessage = 'Peer not found - please check the peer ID and try again';
+                    break;
+                case 'network':
+                    userMessage = 'Network error - please check your internet connection and try again';
+                    break;
+                case 'server-error':
+                    userMessage = 'Server error - please try again later';
+                    break;
+                default:
+                    userMessage = `An error occurred: ${error.message || 'Unknown error'}`;
+            }
+            
+            addSystemMessage(userMessage);
+        }
+        
         // ===== CONNECTION ESTABLISHMENT FUNCTIONS =====
         
         function handleConnectClick() {
             const peerIdInput = document.getElementById('peer-id-input');
             const targetPeerId = peerIdInput.value.trim();
             
-            // Validate input
-            if (!targetPeerId) {
+            // Validate peer ID input
+            if (!validatePeerIdInput(targetPeerId)) {
                 addSystemMessage('Please enter a peer ID to connect');
                 return false;
             }
             
             // Prevent self-connection
-            if (targetPeerId === myId) {
+            if (!validateSelfConnection(targetPeerId)) {
                 addSystemMessage('Cannot connect to yourself');
                 return false;
             }
@@ -931,7 +1135,7 @@
             // Handle connection errors
             conn.on('error', function(err) {
                 console.error('Connection error:', err);
-                addSystemMessage(`Connection error: ${err.message || err}`);
+                handleConnectionError(err);
             });
         }
         
@@ -1064,7 +1268,7 @@
             // Handle peer errors
             peer.on('error', function(err) {
                 console.error('PeerJS Error:', err);
-                addSystemMessage(`Error: ${err.message || err}`);
+                handlePeerError(err);
             });
         }
         
