@@ -256,12 +256,12 @@ The application will be developed using strict TDD methodology:
 
 ### Manual Testing Scenarios
 
-#### Browser Compatibility Validation
+#### Modern Browser Validation
 
-1. **Chrome/Chromium**: Primary testing target with full feature validation
-2. **Firefox**: Secondary compatibility verification
-3. **Safari**: WebRTC compatibility and performance check
-4. **Mobile Browsers**: Basic functionality and responsive design validation
+1. **Chrome/Chromium (Recent Versions)**: Primary testing target with full feature validation
+2. **Firefox (Recent Versions)**: Full compatibility verification
+3. **Safari (Recent Versions)**: WebRTC compatibility and performance check
+4. **Mobile Browsers (Recent Versions)**: Full functionality and responsive design validation
 
 #### Real-World Testing
 
@@ -304,8 +304,9 @@ The application will be developed using strict TDD methodology:
 
 ### Browser Requirements
 
-- **WebRTC Support**: Modern browser with WebRTC DataChannel support
-- **JavaScript**: ES6+ features may be used for cleaner code
+- **Modern Browsers Only**: Recent versions of Chrome, Firefox, and Safari (last 2 major versions)
+- **Native WebRTC Support**: No polyfills or fallbacks for older browsers
+- **ES6+ JavaScript**: Modern JavaScript features used without transpilation
 - **HTTPS**: Required for WebRTC in production environments
 - **Local Testing**: Can run via file:// protocol for development
 

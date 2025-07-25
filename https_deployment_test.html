@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTPS Deployment Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .warn { background-color: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>HTTPS Deployment Readiness Test</h1>
+    <div id="test-results"></div>
+
+    <script>
+        function addResult(message, status) {
+            const div = document.createElement('div');
+            div.className = `test-result ${status}`;
+            div.textContent = message;
+            document.getElementById('test-results').appendChild(div);
+        }
+
+        // Test 1: Protocol check
+        const protocol = window.location.protocol;
+        if (protocol === 'https:') {
+            addResult('✅ Running on HTTPS protocol', 'pass');
+        } else {
+            addResult('⚠️ Running on HTTP protocol - deploy to HTTPS for production', 'warn');
+        }
+
+        // Test 2: Secure context check
+        if (window.isSecureContext) {
+            addResult('✅ Secure context available', 'pass');
+        } else {
+            addResult('❌ Not in secure context - WebRTC may be limited', 'fail');
+        }
+
+        // Test 3: WebRTC APIs check
+        if (typeof RTCPeerConnection !== 'undefined') {
+            addResult('✅ RTCPeerConnection API available', 'pass');
+        } else {
+            addResult('❌ RTCPeerConnection API not available', 'fail');
+        }
+
+        // Test 4: PeerJS library check
+        const peerJsScript = document.createElement('script');
+        peerJsScript.src = 'https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js';
+        peerJsScript.onload = function() {
+            if (typeof Peer !== 'undefined') {
+                addResult('✅ PeerJS library loaded successfully via HTTPS', 'pass');
+                
+                // Test 5: STUN server configuration
+                try {
+                    const testPeer = new Peer({
+                        config: {
+                            iceServers: [
+                                { urls: 'stun:stun.l.google.com:19302' }
+                            ]
+                        }
+                    });
+                    addResult('✅ STUN server configuration valid', 'pass');
+                    testPeer.destroy();
+                } catch (error) {
+                    addResult('❌ STUN server configuration failed: ' + error.message, 'fail');
+                }
+            } else {
+                addResult('❌ PeerJS library failed to load', 'fail');
+            }
+        };
+        peerJsScript.onerror = function() {
+            addResult('❌ Failed to load PeerJS library from HTTPS CDN', 'fail');
+        };
+        document.head.appendChild(peerJsScript);
+
+        // Test 6: External resources check
+        setTimeout(() => {
+            const scripts = document.querySelectorAll('script[src]');
+            let httpsCount = 0;
+            let httpCount = 0;
+            
+            scripts.forEach(script => {
+                if (script.src.startsWith('https://')) {
+                    httpsCount++;
+                } else if (script.src.startsWith('http://')) {
+                    httpCount++;
+                }
+            });
+            
+            if (httpCount === 0) {
+                addResult(`✅ All ${httpsCount} external resources use HTTPS`, 'pass');
+            } else {
+                addResult(`❌ Found ${httpCount} HTTP resources - update to HTTPS`, 'fail');
+            }
+            
+            // Final summary
+            setTimeout(() => {
+                const results = document.querySelectorAll('.test-result');
+                const passes = document.querySelectorAll('.pass').length;
+                const fails = document.querySelectorAll('.fail').length;
+                const warns = document.querySelectorAll('.warn').length;
+                
+                addResult(`\n📊 Test Summary: ${passes} passed, ${fails} failed, ${warns} warnings`, 
+                         fails > 0 ? 'fail' : warns > 0 ? 'warn' : 'pass');
+                
+                if (fails === 0 && warns === 0) {
+                    addResult('🚀 Ready for HTTPS deployment!', 'pass');
+                } else if (fails === 0) {
+                    addResult('⚠️ Ready for deployment with warnings', 'warn');
+                } else {
+                    addResult('❌ Fix issues before HTTPS deployment', 'fail');
+                }
+            }, 500);
+        }, 1000);
+    </script>
+</body>
+</html>

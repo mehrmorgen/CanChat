@@ -77,6 +77,19 @@ This feature implements a minimal WebRTC peer-to-peer text chat application usin
 3. WHEN the page loads THEN the layout SHALL be responsive and work on different screen sizes
 4. WHEN interacting with the interface THEN visual feedback SHALL be provided for user actions
 
+### Requirement 8
+
+**User Story:** As a user, I want the application to work reliably on modern browsers, so that I can use it on my current devices without compatibility issues.
+
+#### Acceptance Criteria 8
+
+1. WHEN the application is accessed THEN it SHALL work on recent versions of Chrome/Chromium (last 2 major versions)
+2. WHEN the application is accessed THEN it SHALL work on recent versions of Firefox (last 2 major versions)
+3. WHEN the application is accessed THEN it SHALL work on recent versions of Safari (last 2 major versions)
+4. WHEN the application is accessed THEN it SHALL work on mobile versions of these browsers
+5. WHEN the application is accessed THEN it SHALL use modern JavaScript features (ES6+) without polyfills
+6. WHEN the application is accessed THEN it SHALL assume native WebRTC support without fallbacks
+
 ### Requirement 7
 
 **User Story:** As a developer, I want comprehensive test coverage for all functionality, so that the application is reliable and maintainable.

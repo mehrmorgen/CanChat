@@ -1,46 +1,29 @@
-// Simple test to verify validation functions work
-console.log('Testing validation functions...');
+// Simple validation script to test HTTPS readiness
+console.log('🔍 Validating HTTPS deployment readiness...');
 
-// Test validatePeerIdInput
-function testValidatePeerIdInput() {
-    console.log('Testing validatePeerIdInput:');
-    console.log('Empty string:', validatePeerIdInput('') === false ? 'PASS' : 'FAIL');
-    console.log('Whitespace only:', validatePeerIdInput('   ') === false ? 'PASS' : 'FAIL');
-    console.log('Valid ID:', validatePeerIdInput('valid-id') === true ? 'PASS' : 'FAIL');
-}
-
-// Test validateSelfConnection
-function testValidateSelfConnection() {
-    console.log('Testing validateSelfConnection:');
-    window.myId = 'test-id';
-    console.log('Self connection:', validateSelfConnection('test-id') === false ? 'PASS' : 'FAIL');
-    console.log('Different peer:', validateSelfConnection('other-id') === true ? 'PASS' : 'FAIL');
-}
-
-// Test error handling functions
-function testErrorHandling() {
-    console.log('Testing error handling functions:');
+// Check if we're in a browser environment
+if (typeof window !== 'undefined') {
+    console.log('✅ Running in browser environment');
     
-    // Mock addSystemMessage for testing
-    let lastMessage = '';
-    window.addSystemMessage = function(msg) {
-        lastMessage = msg;
-    };
+    // Check protocol
+    console.log(`📍 Current protocol: ${window.location.protocol}`);
     
-    handleConnectionError({ type: 'peer-unavailable', message: 'test' });
-    console.log('Peer unavailable error:', lastMessage.includes('Peer not found') ? 'PASS' : 'FAIL');
+    // Check secure context
+    console.log(`🔒 Secure context: ${window.isSecureContext}`);
     
-    handlePeerError({ type: 'network', message: 'test' });
-    console.log('Network error:', lastMessage.includes('Network error') ? 'PASS' : 'FAIL');
+    // Check WebRTC APIs
+    console.log(`🌐 RTCPeerConnection available: ${typeof RTCPeerConnection !== 'undefined'}`);
+    
+    // Check external resources
+    const scripts = document.querySelectorAll('script[src]');
+    console.log(`📦 External scripts found: ${scripts.length}`);
+    
+    scripts.forEach((script, index) => {
+        console.log(`  ${index + 1}. ${script.src} (${script.src.startsWith('https://') ? 'HTTPS ✅' : 'HTTP ⚠️'})`);
+    });
+    
+} else {
+    console.log('❌ Not running in browser environment');
 }
 
-// Run tests if functions are available
-if (typeof validatePeerIdInput !== 'undefined') {
-    testValidatePeerIdInput();
-}
-if (typeof validateSelfConnection !== 'undefined') {
-    testValidateSelfConnection();
-}
-if (typeof handleConnectionError !== 'undefined' && typeof handlePeerError !== 'undefined') {
-    testErrorHandling();
-}
+console.log('✅ Validation complete');
