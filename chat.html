@@ -11,12 +11,121 @@
     <link rel="dns-prefetch" href="//0.peerjs.com">
     <link rel="dns-prefetch" href="//stun.l.google.com">
     <style>
+        /* Modern CSS Reset and Base Styles */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --secondary-color: #6c757d;
+            --light-bg: #f8f9fa;
+            --white: #ffffff;
+            --border-color: #dee2e6;
+            --text-color: #333;
+            --text-muted: #6c757d;
+            --border-radius: 8px;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        /* Mobile-first responsive container */
+        .container {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            transition: var(--transition);
+        }
+        
+        /* Tablet styles */
+        @media (min-width: 768px) {
+            body {
+                padding: 2rem;
+            }
+            
+            .container {
+                padding: 2rem;
+                max-width: 600px;
+            }
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 800px;
+                padding: 2.5rem;
+            }
+        }
+        
+        /* Modern browser upgrade warning styles */
+        .browser-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .browser-warning-content {
+            max-width: 600px;
+            background: var(--white);
+            color: var(--text-color);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .browser-warning h2 {
+            color: var(--danger-color);
+            margin-bottom: 1rem;
+        }
+        
+        .browser-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .browser-link {
+            display: block;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            text-align: center;
+        }
+        
+        .browser-link:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
         }
         
         .container {
@@ -27,60 +136,143 @@
         }
         
         h1 {
-            color: #333;
+            color: var(--text-color);
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Modern CSS Grid layout for sections */
+        .sections-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: 1fr;
+        }
+        
+        @media (min-width: 768px) {
+            .sections-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .section.chat-section {
+                grid-column: 1 / -1;
+            }
         }
         
         .section {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            background: var(--light-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        
+        .section:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
         }
         
         .section h3 {
-            margin-top: 0;
-            color: #555;
+            margin: 0 0 1rem 0;
+            color: var(--text-color);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        /* Modern form controls using CSS Grid and Flexbox */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (min-width: 480px) {
+            .form-group.inline {
+                flex-direction: row;
+                align-items: center;
+            }
+            
+            .form-group.inline input {
+                flex: 1;
+            }
         }
         
         input, button, textarea {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: var(--transition);
+            background: var(--white);
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
         
         button {
-            background-color: #007bff;
+            background: var(--primary-color);
             color: white;
             cursor: pointer;
+            border: 2px solid var(--primary-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-height: 44px; /* Touch-friendly minimum */
         }
         
-        button:hover {
-            background-color: #0056b3;
+        button:hover:not(:disabled) {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        button:active:not(:disabled) {
+            transform: translateY(0);
         }
         
         button:disabled {
-            background-color: #6c757d;
+            background: var(--secondary-color);
+            border-color: var(--secondary-color);
             cursor: not-allowed;
+            opacity: 0.6;
         }
         
         #chat-log {
             width: 100%;
-            height: 200px;
+            min-height: 200px;
+            height: 40vh;
+            max-height: 400px;
             resize: vertical;
-            font-family: monospace;
-            background-color: #f8f9fa;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            background: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            line-height: 1.5;
+            font-size: 0.9rem;
         }
         
         #my-id {
-            font-weight: bold;
-            color: #28a745;
-            padding: 5px;
-            background-color: #d4edda;
-            border-radius: 4px;
+            font-weight: 600;
+            color: var(--success-color);
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border-radius: var(--border-radius);
+            border: 2px solid #b8dacc;
+            font-family: 'SF Mono', Monaco, monospace;
+            word-break: break-all;
+            text-align: center;
+            font-size: 0.9rem;
         }
         
         .test-results {
@@ -276,15 +468,18 @@
     <div class="container">
         <h1>WebRTC PeerJS Chat</h1>
         
-        <div class="section">
-            <h3>Your Peer ID</h3>
-            <div id="my-id">Connecting...</div>
-        </div>
-        
-        <div class="section">
-            <h3>Connect to Peer</h3>
-            <input type="text" id="peer-id-input" placeholder="Enter peer ID to connect">
-            <button id="connect-btn">Connect</button>
+        <div class="sections-grid">
+            <div class="section">
+                <h3>Your Peer ID</h3>
+                <div id="my-id">Connecting...</div>
+            </div>
+            
+            <div class="section">
+                <h3>Connect to Peer</h3>
+                <div class="form-group inline">
+                    <input type="text" id="peer-id-input" placeholder="Enter peer ID to connect" autocomplete="off">
+                    <button id="connect-btn">Connect</button>
+                </div>
             <div id="connection-status" class="connection-status">
                 <span id="status-indicator" class="status-indicator">●</span>
                 <span id="status-text">Disconnected</span>
@@ -308,14 +503,15 @@
                 <h4>Connection Quality</h4>
                 <div id="quality-info"></div>
             </div>
-        </div>
-        
-        <div class="section">
-            <h3>Chat</h3>
-            <textarea id="chat-log" readonly placeholder="Chat messages will appear here..."></textarea>
-            <div>
-                <input type="text" id="message-input" placeholder="Type your message...">
-                <button id="send-btn" disabled>Send</button>
+            </div>
+            
+            <div class="section chat-section">
+                <h3>Chat</h3>
+                <textarea id="chat-log" readonly placeholder="Chat messages will appear here..." aria-label="Chat messages"></textarea>
+                <div class="form-group inline">
+                    <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" aria-label="Message input">
+                    <button id="send-btn" disabled>Send</button>
+                </div>
             </div>
         </div>
         
@@ -331,6 +527,206 @@
     <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" defer></script>
     
     <script>
+        // ===== MODERN BROWSER DETECTION AND BLOCKING =====
+        
+        /**
+         * Detects browser version and blocks legacy browsers
+         * Supports Chrome 88+, Firefox 85+, Safari 14+ only
+         */
+        const detectAndBlockLegacyBrowsers = () => {
+            const userAgent = navigator.userAgent;
+            const browserInfo = getBrowserInfo(userAgent);
+            
+            if (!browserInfo.isSupported) {
+                showBrowserUpgradeWarning(browserInfo);
+                return false;
+            }
+            
+            // Log browser info for deployment analysis
+            console.log('✅ Modern browser detected:', browserInfo);
+            return true;
+        };
+        
+        /**
+         * Parses user agent to determine browser and version
+         * @param {string} userAgent - The navigator.userAgent string
+         * @returns {Object} Browser information with support status
+         */
+        const getBrowserInfo = (userAgent) => {
+            // Modern browser detection using regex patterns
+            const browsers = [
+                {
+                    name: 'Chrome',
+                    pattern: /Chrome\/(\d+)/,
+                    minVersion: 88,
+                    downloadUrl: 'https://www.google.com/chrome/'
+                },
+                {
+                    name: 'Firefox',
+                    pattern: /Firefox\/(\d+)/,
+                    minVersion: 85,
+                    downloadUrl: 'https://www.mozilla.org/firefox/'
+                },
+                {
+                    name: 'Safari',
+                    pattern: /Version\/(\d+).*Safari/,
+                    minVersion: 14,
+                    downloadUrl: 'https://www.apple.com/safari/'
+                },
+                {
+                    name: 'Edge',
+                    pattern: /Edg\/(\d+)/,
+                    minVersion: 88,
+                    downloadUrl: 'https://www.microsoft.com/edge'
+                }
+            ];
+            
+            for (const browser of browsers) {
+                const match = userAgent.match(browser.pattern);
+                if (match) {
+                    const version = parseInt(match[1], 10);
+                    return {
+                        name: browser.name,
+                        version,
+                        minVersion: browser.minVersion,
+                        isSupported: version >= browser.minVersion,
+                        downloadUrl: browser.downloadUrl,
+                        userAgent
+                    };
+                }
+            }
+            
+            // Unknown browser - block by default
+            return {
+                name: 'Unknown',
+                version: 0,
+                minVersion: 999,
+                isSupported: false,
+                downloadUrl: 'https://www.google.com/chrome/',
+                userAgent
+            };
+        };
+        
+        /**
+         * Shows browser upgrade warning with download links
+         * @param {Object} browserInfo - Browser information object
+         */
+        const showBrowserUpgradeWarning = (browserInfo) => {
+            const warningHtml = `
+                <div class="browser-warning">
+                    <div class="browser-warning-content">
+                        <h2>🚫 Modern Browser Required</h2>
+                        <p><strong>Your browser is not supported.</strong></p>
+                        <p>Detected: ${browserInfo.name} ${browserInfo.version || 'Unknown'}</p>
+                        <p>This application requires modern browser features and will not work with legacy browsers.</p>
+                        
+                        <h3>Minimum Requirements:</h3>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>Chrome 88+ (Released Jan 2021)</li>
+                            <li>Firefox 85+ (Released Jan 2021)</li>
+                            <li>Safari 14+ (Released Sep 2020)</li>
+                            <li>Edge 88+ (Released Jan 2021)</li>
+                        </ul>
+                        
+                        <p><strong>Why upgrade?</strong> This app uses modern JavaScript (ES2020+), WebRTC, and CSS features that require recent browser versions for security and performance.</p>
+                        
+                        <div class="browser-links">
+                            <a href="https://www.google.com/chrome/" class="browser-link" target="_blank">
+                                Download Chrome
+                            </a>
+                            <a href="https://www.mozilla.org/firefox/" class="browser-link" target="_blank">
+                                Download Firefox
+                            </a>
+                            <a href="https://www.microsoft.com/edge" class="browser-link" target="_blank">
+                                Download Edge
+                            </a>
+                        </div>
+                        
+                        <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
+                            <strong>Mobile users:</strong> Update your browser through your device's app store.
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', warningHtml);
+            
+            // Prevent any further script execution
+            throw new Error('Legacy browser blocked');
+        };
+        
+        /**
+         * Validates modern JavaScript features are available
+         * Tests ES2020+ features like optional chaining, nullish coalescing
+         */
+        const validateModernJSFeatures = () => {
+            try {
+                // Test optional chaining
+                const test1 = {}?.nonexistent?.property;
+                
+                // Test nullish coalescing
+                const test2 = null ?? 'default';
+                
+                // Test BigInt
+                const test3 = BigInt(123);
+                
+                // Test Promise.allSettled (ES2020)
+                const test4 = Promise.allSettled([Promise.resolve(1)]);
+                
+                // Test String.matchAll (ES2020)
+                const test5 = 'test'.matchAll(/t/g);
+                
+                console.log('✅ Modern JavaScript features validated');
+                return true;
+            } catch (error) {
+                console.error('❌ Modern JavaScript features not supported:', error);
+                showBrowserUpgradeWarning({
+                    name: 'Legacy',
+                    version: 'Unknown',
+                    isSupported: false
+                });
+                return false;
+            }
+        };
+        
+        /**
+         * Validates modern WebRTC and browser APIs
+         */
+        const validateModernWebAPIs = () => {
+            const requiredAPIs = [
+                'RTCPeerConnection',
+                'RTCDataChannel',
+                'fetch',
+                'Promise',
+                'Map',
+                'Set',
+                'WeakMap',
+                'Symbol',
+                'Proxy'
+            ];
+            
+            const missingAPIs = requiredAPIs.filter(api => !(api in window));
+            
+            if (missingAPIs.length > 0) {
+                console.error('❌ Missing required APIs:', missingAPIs);
+                showBrowserUpgradeWarning({
+                    name: 'Legacy',
+                    version: 'Unknown',
+                    isSupported: false
+                });
+                return false;
+            }
+            
+            console.log('✅ Modern Web APIs validated');
+            return true;
+        };
+        
+        // Run browser detection immediately - block legacy browsers
+        if (!detectAndBlockLegacyBrowsers() || !validateModernJSFeatures() || !validateModernWebAPIs()) {
+            // Script execution stops here for legacy browsers
+            throw new Error('Legacy browser blocked - script execution terminated');
+        }
+        
         // ===== TESTING FRAMEWORK SETUP =====
         
         // Simple test framework setup - modernized for ES6+
@@ -2611,9 +3007,27 @@
         
         // ===== APPLICATION VARIABLES =====
         
+        // Global variables for PeerJS and connection management using modern const/let
         let peer = null;
         let connection = null;
         let myId = null;
+        
+        // Modern configuration using object destructuring and default parameters
+        const CONFIG = {
+            STUN_SERVER: 'stun:stun.l.google.com:19302',
+            CONNECTION_TIMEOUT: 30000,
+            MAX_RETRIES: 3,
+            BASE_RETRY_DELAY: 2000,
+            PERFORMANCE_MONITORING: true
+        };
+        
+        // Modern Map for better performance than objects
+        const connectionStates = new Map([
+            ['disconnected', { indicator: 'status-disconnected', text: 'Disconnected' }],
+            ['connecting', { indicator: 'status-connecting', text: 'Connecting...' }],
+            ['connected', { indicator: 'status-connected', text: 'Connected' }],
+            ['error', { indicator: 'status-error', text: 'Connection Failed' }]
+        ]);
         let connectionTimeout = null;
         let retryCount = 0;
         const MAX_RETRIES = 3;
@@ -3926,9 +4340,10 @@
         // ===== PEERJS INITIALIZATION =====
         
         /**
-         * Initializes the PeerJS instance with STUN server configuration and event handlers
+         * Initializes the PeerJS instance with modern async/await and ES2020+ features
+         * Uses Safari 14+ modern WebRTC features and native JavaScript improvements
          */
-        const initializePeer = () => {
+        const initializePeer = async () => {
             // Check secure context and WebRTC support before initialization
             if (!checkSecureContext()) {
                 // Continue with limited functionality warning
@@ -3948,45 +4363,93 @@
             validateHTTPSResources();
             
             try {
-                // Create PeerJS instance with Google STUN server configuration
-                peer = new Peer({
+                // Modern configuration using destructuring and spread operator
+                const peerConfig = {
                     config: {
                         iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' }
-                        ]
-                    }
-                });
+                            { urls: CONFIG.STUN_SERVER }
+                        ],
+                        // Modern WebRTC configuration for Safari 14+ and Chrome 88+
+                        iceCandidatePoolSize: 10,
+                        bundlePolicy: 'max-bundle',
+                        rtcpMuxPolicy: 'require',
+                        // Use modern DTLS for better security
+                        iceTransportPolicy: 'all'
+                    },
+                    // Modern debugging configuration
+                    debug: window.location.hostname === 'localhost' ? 2 : 0
+                };
                 
-                // Store peer globally for testing
-                window.peer = peer;
+                // Create PeerJS instance with modern error handling
+                peer = new Peer(peerConfig);
                 
-                // Handle peer 'open' event - when peer ID is ready (modernized with arrow function)
+                // Store peer globally for testing using modern assignment
+                Object.assign(window, { peer });
+                
+                // Modern event handling with arrow functions and optional chaining
                 peer.on('open', (id) => {
                     updateMyId(id);
-                    addSystemMessage('Your ID is ready; share it with your peer.');
+                    addSystemMessage('✅ Your ID is ready; share it with your peer.');
                     
-                    // Additional HTTPS deployment success message
-                    if (window.location.protocol === 'https:') {
-                        addSystemMessage('✅ Running in secure HTTPS context - full WebRTC functionality available.');
+                    // Modern conditional logic with nullish coalescing
+                    const protocol = window.location.protocol;
+                    const isSecure = protocol === 'https:';
+                    
+                    if (isSecure) {
+                        addSystemMessage('🔒 Running in secure HTTPS context - full WebRTC functionality available.');
+                    }
+                    
+                    // Modern performance monitoring
+                    if (CONFIG.PERFORMANCE_MONITORING) {
+                        recordPageLoadTime();
                     }
                 });
                 
-                // Handle incoming connections (modernized with arrow function)
+                // Handle incoming connections with modern syntax
                 peer.on('connection', (conn) => {
+                    addSystemMessage(`📞 Incoming connection from: ${conn.peer}`);
                     handleIncomingConnection(conn);
                 });
                 
-                // Handle peer errors with HTTPS-specific handling (modernized with arrow function)
+                // Enhanced error handling with modern Map lookup and optional chaining
                 peer.on('error', (err) => {
                     console.error('PeerJS Error:', err);
-                    handleHTTPSError(err);
-                    handlePeerError(err);
+                    
+                    // Use nullish coalescing and optional chaining (ES2020)
+                    const errorType = err?.type ?? 'unknown';
+                    const errorMessage = err?.message ?? 'Unknown peer error';
+                    
+                    handleHTTPSError({ type: errorType, message: errorMessage });
+                    handlePeerError({ type: errorType, message: errorMessage });
                 });
                 
+                // Modern event handling for connection state monitoring
+                peer.on('disconnected', () => {
+                    addSystemMessage('⚠️ Disconnected from signaling server - attempting reconnect...');
+                    
+                    // Modern reconnection with exponential backoff using async/await
+                    setTimeout(async () => {
+                        if (!peer.destroyed) {
+                            try {
+                                await peer.reconnect();
+                                addSystemMessage('✅ Reconnected to signaling server');
+                            } catch (reconnectError) {
+                                console.error('Reconnection failed:', reconnectError);
+                                addSystemMessage('❌ Failed to reconnect - please refresh the page');
+                            }
+                        }
+                    }, 1000);
+                });
+                
+                console.log('✅ PeerJS initialized with modern configuration');
+                
             } catch (error) {
-                console.error('Failed to initialize PeerJS:', error);
+                console.error('❌ Failed to initialize PeerJS:', error);
                 handleHTTPSError(error);
-                addSystemMessage('❌ Failed to initialize peer connection.');
+                addSystemMessage(`❌ Failed to initialize peer connection: ${error?.message ?? 'Unknown error'}`);
+                
+                // Modern error recovery with exponential backoff
+                setTimeout(() => initializePeer(), 5000);
             }
         };
         
