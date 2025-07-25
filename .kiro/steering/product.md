@@ -21,4 +21,4 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
 
 ## Technical Approach
 
-The application follows Test-Driven Development (TDD) methodology with comprehensive unit and integration testing. All functionality is contained within a single HTML file for maximum portability and ease of deployment.
+The application follows Test-Driven Development (TDD) methodology with comprehensive unit and integration testing. Built exclusively for modern browsers, it leverages native WebRTC APIs and ES2020+ JavaScript features without polyfills or transpilation. All functionality is contained within a single HTML file for maximum portability and ease of deployment.

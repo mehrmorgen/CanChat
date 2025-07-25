@@ -2,9 +2,9 @@
 
 ## Core Technologies
 
-- **HTML5**: Single-file application structure with semantic markup
-- **CSS3**: Inline styling for responsive, clean interface
-- **JavaScript (ES6+)**: All application logic in vanilla JavaScript
+- **HTML5**: Single-file application with modern semantic markup
+- **CSS3**: Modern CSS features (Grid, Flexbox, Custom Properties) inline
+- **JavaScript (ES2020+)**: Modern vanilla JavaScript with native modules, async/await
 - **WebRTC**: Direct peer-to-peer communication via browser APIs
 - **PeerJS**: WebRTC abstraction library for simplified connection management
 
@@ -19,8 +19,9 @@
 
 - **Test-Driven Development (TDD)**: All features developed with tests first
 - **100% Test Coverage**: Every function and code path must be tested
-- **Single File Architecture**: No build process or bundling required
-- **Browser-Based Testing**: All tests run directly in the browser environment
+- **Single File Architecture**: No build process, bundling, or transpilation
+- **Modern Browser Testing**: Tests run natively in modern browser environments
+- **Progressive Enhancement**: Start with modern features, no legacy fallbacks
 
 ## Common Commands
 
@@ -60,7 +61,8 @@ git commit -m "message"              # Commit with message
 
 ## Browser Requirements
 
-- Modern browser with WebRTC DataChannel support
-- JavaScript enabled
-- HTTPS required for production (WebRTC security requirement)
-- Tested on Chrome, Firefox, Safari, and mobile browsers
+- **Modern browsers only**: Chrome 88+, Firefox 85+, Safari 14+ (last 2 major versions)
+- **Native WebRTC support**: No polyfills, shims, or legacy browser compatibility layers
+- **Modern JavaScript**: ES2020+ features used without transpilation or Babel
+- **HTTPS required for production**: WebRTC getUserMedia and connection security requirement
+- **Mobile-first responsive**: Recent mobile browser versions prioritized

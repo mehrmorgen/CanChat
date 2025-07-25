@@ -37,13 +37,13 @@ The entire application is contained within `chat.html` with the following intern
 ```javascript
 // 1. Testing Framework Setup
 // 2. Test Suites (Unit & Integration)
-// 3. Application Variables & State
-// 4. Helper Functions
-// 5. PeerJS Initialization
-// 6. Connection Management
-// 7. Message Handling
-// 8. Event Listeners Setup
-// 9. Application Initialization
+// 3. Application Variables & State (using modern const/let)
+// 4. Helper Functions (arrow functions, destructuring)
+// 5. PeerJS Initialization (async/await patterns)
+// 6. Connection Management (Promise-based)
+// 7. Message Handling (modern event handling)
+// 8. Event Listeners Setup (addEventListener with options)
+// 9. Application Initialization (DOMContentLoaded)
 ```
 
 ## Code Conventions
