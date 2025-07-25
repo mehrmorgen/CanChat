@@ -80,6 +80,34 @@ This application is automatically deployed to GitHub Pages:
 3. **HTTPS Enforcement**: GitHub Pages automatically provides HTTPS
 4. **Global CDN**: GitHub's CDN ensures fast loading worldwide
 
+#### GitHub Pages Configuration
+
+- **Repository**: `mehrmorgen/CanChat`
+- **Source Branch**: `main` (root directory)
+- **Deployment URL**: [https://mehrmorgen.github.io/CanChat/chat.html](https://mehrmorgen.github.io/CanChat/chat.html)
+- **HTTPS Enforced**: Yes (automatic)
+- **Custom Domain**: Not configured (using github.io subdomain)
+
+#### URL Sharing Instructions
+
+To share the application for testing:
+
+1. **Direct Link**: Share `https://mehrmorgen.github.io/CanChat/chat.html`
+2. **QR Code**: Generate QR code for the URL for mobile device testing
+3. **Testing Setup**: 
+   - Person A opens the URL and generates a peer ID
+   - Person B opens the URL and generates a peer ID
+   - Both persons exchange peer IDs and connect
+   - Start chatting to test cross-network functionality
+
+#### Deployment Verification
+
+- ✅ GitHub Pages enabled on `main` branch
+- ✅ `chat.html` accessible at deployment URL
+- ✅ HTTPS enforcement active
+- ✅ Automatic deployment on push verified
+- ✅ WebRTC functionality working over HTTPS
+
 ### Repository Structure
 ```
 .
