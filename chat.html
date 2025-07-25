@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebRTC PeerJS Chat</title>
+    
+    <!-- Resource optimization: preload critical resources -->
+    <link rel="preload" href="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" as="script">
+    <link rel="dns-prefetch" href="//unpkg.com">
+    <link rel="dns-prefetch" href="//0.peerjs.com">
+    <link rel="dns-prefetch" href="//stun.l.google.com">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -198,6 +204,72 @@
         .diagnostic-error {
             color: #721c24;
         }
+        
+        .performance-metrics {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+        }
+        
+        .performance-metrics h4 {
+            margin: 0 0 8px 0;
+            color: #0c5460;
+            font-size: 14px;
+        }
+        
+        .metric-item {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #0c5460;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+        }
+        
+        .metric-good {
+            color: #155724;
+        }
+        
+        .metric-warning {
+            color: #856404;
+        }
+        
+        .metric-poor {
+            color: #721c24;
+        }
+        
+        .connection-quality {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .quality-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .quality-excellent {
+            background-color: #28a745;
+        }
+        
+        .quality-good {
+            background-color: #ffc107;
+        }
+        
+        .quality-poor {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -228,6 +300,14 @@
                 <h4>Network Diagnostics</h4>
                 <div id="diagnostic-info"></div>
             </div>
+            <div id="performance-metrics" class="performance-metrics" style="display: none;">
+                <h4>Performance Metrics</h4>
+                <div id="performance-info"></div>
+            </div>
+            <div id="connection-quality" class="connection-quality" style="display: none;">
+                <h4>Connection Quality</h4>
+                <div id="quality-info"></div>
+            </div>
         </div>
         
         <div class="section">
@@ -247,8 +327,8 @@
 
     <!-- Simple Testing Framework (Jest-lite was causing issues) -->
     
-    <!-- PeerJS Library -->
-    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    <!-- PeerJS Library - optimized loading -->
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" defer></script>
     
     <script>
         // ===== TESTING FRAMEWORK SETUP =====
@@ -1482,6 +1562,153 @@
             });
         });
         
+        describe('Performance Monitoring Tests', () => {
+            test('should have performance monitoring functions defined', () => {
+                expect(typeof recordPageLoadTime).toBe('function');
+                expect(typeof recordConnectionStart).toBe('function');
+                expect(typeof recordConnectionEnd).toBe('function');
+                expect(typeof startMemoryMonitoring).toBe('function');
+                expect(typeof stopMemoryMonitoring).toBe('function');
+                expect(typeof showPerformanceMetrics).toBe('function');
+                expect(typeof updateConnectionQuality).toBe('function');
+                expect(typeof logPerformanceMetrics).toBe('function');
+            });
+            
+            test('should initialize performance metrics object', () => {
+                expect(typeof performanceMetrics).toBe('object');
+                expect(typeof performanceMetrics.pageLoadStart).toBe('number');
+                expect(performanceMetrics.resourceLoadTimes instanceof Map).toBe(true);
+                expect(typeof performanceMetrics.connectionQuality).toBe('object');
+            });
+            
+            test('should record page load time', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                recordPageLoadTime();
+                
+                expect(performanceMetrics.pageLoadEnd).not.toBeNull();
+                expect(chatLog.value).toContain('Page loaded in');
+                expect(chatLog.value).toContain('ms');
+            });
+            
+            test('should record connection timing', () => {
+                recordConnectionStart();
+                expect(performanceMetrics.connectionStartTime).not.toBeNull();
+                
+                // Simulate small delay
+                setTimeout(() => {
+                    const chatLog = document.getElementById('chat-log');
+                    const initialLength = chatLog.value.length;
+                    
+                    recordConnectionEnd();
+                    
+                    expect(performanceMetrics.connectionEndTime).not.toBeNull();
+                    expect(chatLog.value).toContain('Connection established in');
+                }, 10);
+            });
+            
+            test('should show performance metrics in UI', () => {
+                const metricsContainer = document.getElementById('performance-metrics');
+                const metricsInfo = document.getElementById('performance-info');
+                
+                expect(metricsContainer).not.toBeNull();
+                expect(metricsInfo).not.toBeNull();
+                
+                showPerformanceMetrics();
+                
+                expect(metricsContainer.style.display).toBe('block');
+                expect(metricsInfo.innerHTML).toContain('Page Load Time');
+            });
+            
+            test('should classify performance metrics correctly', () => {
+                expect(getLoadTimeClass(500)).toBe('metric-good');
+                expect(getLoadTimeClass(2000)).toBe('metric-warning');
+                expect(getLoadTimeClass(4000)).toBe('metric-poor');
+                
+                expect(getConnectionTimeClass(1000)).toBe('metric-good');
+                expect(getConnectionTimeClass(3000)).toBe('metric-warning');
+                expect(getConnectionTimeClass(6000)).toBe('metric-poor');
+            });
+            
+            test('should handle memory monitoring gracefully', () => {
+                // Should not throw error even if performance.memory is not available
+                expect(() => startMemoryMonitoring()).not.toThrow();
+                expect(() => stopMemoryMonitoring()).not.toThrow();
+            });
+            
+            test('should log performance metrics', () => {
+                const originalConsoleLog = console.log;
+                let loggedData = null;
+                
+                console.log = (message, data) => {
+                    if (message === 'Performance Metrics:') {
+                        loggedData = data;
+                    }
+                };
+                
+                logPerformanceMetrics();
+                
+                expect(loggedData).not.toBeNull();
+                expect(typeof loggedData.timestamp).toBe('string');
+                expect(typeof loggedData.pageLoadTime).toBe('number');
+                expect(typeof loggedData.userAgent).toBe('string');
+                
+                console.log = originalConsoleLog;
+            });
+        });
+        
+        describe('Connection Quality Monitoring Tests', () => {
+            test('should have connection quality functions defined', () => {
+                expect(typeof updateConnectionQuality).toBe('function');
+                expect(typeof showConnectionQuality).toBe('function');
+                expect(typeof startPerformanceMonitoring).toBe('function');
+                expect(typeof stopPerformanceMonitoring).toBe('function');
+            });
+            
+            test('should show connection quality in UI', () => {
+                const qualityContainer = document.getElementById('connection-quality');
+                const qualityInfo = document.getElementById('quality-info');
+                
+                expect(qualityContainer).not.toBeNull();
+                expect(qualityInfo).not.toBeNull();
+                
+                const mockQualityData = {
+                    rtt: 50,
+                    bandwidth: 1500,
+                    packetLoss: 0,
+                    jitter: 10
+                };
+                
+                showConnectionQuality(mockQualityData);
+                
+                expect(qualityContainer.style.display).toBe('block');
+                expect(qualityInfo.innerHTML).toContain('Overall Quality');
+                expect(qualityInfo.innerHTML).toContain('Round-trip Time');
+            });
+            
+            test('should classify connection quality correctly', () => {
+                expect(getRTTClass(50)).toBe('metric-good');
+                expect(getRTTClass(200)).toBe('metric-warning');
+                expect(getRTTClass(400)).toBe('metric-poor');
+                
+                expect(getBandwidthClass(2000)).toBe('metric-good');
+                expect(getBandwidthClass(750)).toBe('metric-warning');
+                expect(getBandwidthClass(300)).toBe('metric-poor');
+                
+                expect(getPacketLossClass(0)).toBe('metric-good');
+                expect(getPacketLossClass(3)).toBe('metric-warning');
+                expect(getPacketLossClass(10)).toBe('metric-poor');
+            });
+            
+            test('should handle missing connection gracefully', () => {
+                window.connection = null;
+                expect(() => updateConnectionQuality()).not.toThrow();
+                expect(() => startPerformanceMonitoring()).not.toThrow();
+                expect(() => stopPerformanceMonitoring()).not.toThrow();
+            });
+        });
+        
         describe('Helper Function Isolation Tests', () => {
             test('should have pure helper functions that don\'t modify global state directly', () => {
                 // Test validatePeerIdInput is pure
@@ -2393,6 +2620,26 @@
         const BASE_RETRY_DELAY = 2000; // 2 seconds
         let connectionStartTime = null;
         
+        // ===== PERFORMANCE MONITORING VARIABLES =====
+        
+        let performanceMetrics = {
+            pageLoadStart: performance.now(),
+            pageLoadEnd: null,
+            connectionStartTime: null,
+            connectionEndTime: null,
+            memoryBaseline: null,
+            resourceLoadTimes: new Map(),
+            connectionQuality: {
+                rtt: null,
+                bandwidth: null,
+                packetLoss: null,
+                jitter: null
+            }
+        };
+        
+        let performanceMonitoringInterval = null;
+        let memoryMonitoringInterval = null;
+        
         // Make variables globally accessible for testing
         Object.assign(window, { peer, connection, myId });
         
@@ -2415,6 +2662,384 @@
             myIdElement.textContent = id;
             myId = id;
             window.myId = id;
+        };
+        
+        // ===== PERFORMANCE MONITORING FUNCTIONS =====
+        
+        /**
+         * Records page load completion time and displays metrics
+         */
+        const recordPageLoadTime = () => {
+            performanceMetrics.pageLoadEnd = performance.now();
+            const loadTime = performanceMetrics.pageLoadEnd - performanceMetrics.pageLoadStart;
+            
+            addSystemMessage(`📊 Page loaded in ${Math.round(loadTime)}ms`);
+            
+            // Record resource load times
+            if (performance.getEntriesByType) {
+                const resources = performance.getEntriesByType('resource');
+                resources.forEach(resource => {
+                    if (resource.name.includes('peerjs') || resource.name.includes('jest')) {
+                        const resourceLoadTime = resource.responseEnd - resource.requestStart;
+                        performanceMetrics.resourceLoadTimes.set(resource.name, resourceLoadTime);
+                    }
+                });
+            }
+            
+            showPerformanceMetrics();
+        };
+        
+        /**
+         * Records connection establishment start time
+         */
+        const recordConnectionStart = () => {
+            performanceMetrics.connectionStartTime = performance.now();
+            connectionStartTime = Date.now(); // Keep existing variable for compatibility
+        };
+        
+        /**
+         * Records connection establishment completion time
+         */
+        const recordConnectionEnd = () => {
+            performanceMetrics.connectionEndTime = performance.now();
+            const connectionTime = performanceMetrics.connectionEndTime - performanceMetrics.connectionStartTime;
+            
+            addSystemMessage(`⚡ Connection established in ${Math.round(connectionTime)}ms`);
+            updatePerformanceMetrics();
+        };
+        
+        /**
+         * Starts memory usage monitoring
+         */
+        const startMemoryMonitoring = () => {
+            if (!performance.memory) {
+                addSystemMessage('💾 Memory monitoring not available in this browser');
+                return;
+            }
+            
+            performanceMetrics.memoryBaseline = performance.memory.usedJSHeapSize;
+            
+            memoryMonitoringInterval = setInterval(() => {
+                const currentMemory = performance.memory.usedJSHeapSize;
+                const memoryIncrease = currentMemory - performanceMetrics.memoryBaseline;
+                
+                // Alert if memory usage increases significantly (>10MB)
+                if (memoryIncrease > 10 * 1024 * 1024) {
+                    addSystemMessage(`⚠️ Memory usage increased by ${Math.round(memoryIncrease / 1024 / 1024)}MB`);
+                    performanceMetrics.memoryBaseline = currentMemory; // Reset baseline
+                }
+            }, 30000); // Check every 30 seconds
+        };
+        
+        /**
+         * Stops memory usage monitoring
+         */
+        const stopMemoryMonitoring = () => {
+            if (memoryMonitoringInterval) {
+                clearInterval(memoryMonitoringInterval);
+                memoryMonitoringInterval = null;
+            }
+        };
+        
+        /**
+         * Shows performance metrics in the UI
+         */
+        const showPerformanceMetrics = () => {
+            const metricsContainer = document.getElementById('performance-metrics');
+            const metricsInfo = document.getElementById('performance-info');
+            
+            if (!metricsContainer || !metricsInfo) return;
+            
+            const loadTime = performanceMetrics.pageLoadEnd - performanceMetrics.pageLoadStart;
+            const connectionTime = performanceMetrics.connectionEndTime && performanceMetrics.connectionStartTime 
+                ? performanceMetrics.connectionEndTime - performanceMetrics.connectionStartTime 
+                : null;
+            
+            let html = `
+                <div class="metric-item">
+                    <span>Page Load Time:</span>
+                    <span class="metric-value ${getLoadTimeClass(loadTime)}">${Math.round(loadTime)}ms</span>
+                </div>
+            `;
+            
+            if (connectionTime) {
+                html += `
+                    <div class="metric-item">
+                        <span>Connection Time:</span>
+                        <span class="metric-value ${getConnectionTimeClass(connectionTime)}">${Math.round(connectionTime)}ms</span>
+                    </div>
+                `;
+            }
+            
+            if (performance.memory) {
+                const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                html += `
+                    <div class="metric-item">
+                        <span>Memory Usage:</span>
+                        <span class="metric-value ${getMemoryClass(memoryMB)}">${memoryMB}MB</span>
+                    </div>
+                `;
+            }
+            
+            // Show resource load times
+            for (const [resource, time] of performanceMetrics.resourceLoadTimes) {
+                const resourceName = resource.includes('peerjs') ? 'PeerJS' : 'Jest';
+                html += `
+                    <div class="metric-item">
+                        <span>${resourceName} Load:</span>
+                        <span class="metric-value ${getResourceTimeClass(time)}">${Math.round(time)}ms</span>
+                    </div>
+                `;
+            }
+            
+            metricsInfo.innerHTML = html;
+            metricsContainer.style.display = 'block';
+        };
+        
+        /**
+         * Updates performance metrics display
+         */
+        const updatePerformanceMetrics = () => {
+            showPerformanceMetrics();
+            updateConnectionQuality();
+        };
+        
+        /**
+         * Gets CSS class for load time based on performance thresholds
+         */
+        const getLoadTimeClass = (time) => {
+            if (time < 1000) return 'metric-good';
+            if (time < 3000) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Gets CSS class for connection time based on performance thresholds
+         */
+        const getConnectionTimeClass = (time) => {
+            if (time < 2000) return 'metric-good';
+            if (time < 5000) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Gets CSS class for memory usage based on thresholds
+         */
+        const getMemoryClass = (memoryMB) => {
+            if (memoryMB < 50) return 'metric-good';
+            if (memoryMB < 100) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Gets CSS class for resource load time based on thresholds
+         */
+        const getResourceTimeClass = (time) => {
+            if (time < 500) return 'metric-good';
+            if (time < 1500) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Starts performance monitoring for connection quality
+         */
+        const startPerformanceMonitoring = () => {
+            if (!connection?.peerConnection) return;
+            
+            performanceMonitoringInterval = setInterval(async () => {
+                await updateConnectionQuality();
+            }, 5000); // Update every 5 seconds
+        };
+        
+        /**
+         * Stops performance monitoring
+         */
+        const stopPerformanceMonitoring = () => {
+            if (performanceMonitoringInterval) {
+                clearInterval(performanceMonitoringInterval);
+                performanceMonitoringInterval = null;
+            }
+        };
+        
+        /**
+         * Updates connection quality indicators
+         */
+        const updateConnectionQuality = async () => {
+            if (!connection?.peerConnection) return;
+            
+            try {
+                const stats = await connection.peerConnection.getStats();
+                let qualityData = {
+                    rtt: null,
+                    bandwidth: null,
+                    packetLoss: null,
+                    jitter: null
+                };
+                
+                for (const report of stats.values()) {
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        qualityData.rtt = report.currentRoundTripTime ? Math.round(report.currentRoundTripTime * 1000) : null;
+                        qualityData.bandwidth = report.availableOutgoingBitrate ? Math.round(report.availableOutgoingBitrate / 1000) : null;
+                    }
+                    
+                    if (report.type === 'inbound-rtp' && report.mediaType === 'audio') {
+                        qualityData.packetLoss = report.packetsLost || 0;
+                        qualityData.jitter = report.jitter ? Math.round(report.jitter * 1000) : null;
+                    }
+                }
+                
+                performanceMetrics.connectionQuality = qualityData;
+                showConnectionQuality(qualityData);
+                
+            } catch (error) {
+                console.warn('Could not get connection quality stats:', error);
+            }
+        };
+        
+        /**
+         * Shows connection quality indicators in the UI
+         */
+        const showConnectionQuality = (qualityData) => {
+            const qualityContainer = document.getElementById('connection-quality');
+            const qualityInfo = document.getElementById('quality-info');
+            
+            if (!qualityContainer || !qualityInfo) return;
+            
+            let overallQuality = 'excellent';
+            let html = '';
+            
+            if (qualityData.rtt !== null) {
+                const rttClass = getRTTClass(qualityData.rtt);
+                if (rttClass !== 'metric-good') overallQuality = rttClass === 'metric-warning' ? 'good' : 'poor';
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Round-trip Time:</span>
+                        <span class="metric-value ${rttClass}">${qualityData.rtt}ms</span>
+                    </div>
+                `;
+            }
+            
+            if (qualityData.bandwidth !== null) {
+                const bandwidthClass = getBandwidthClass(qualityData.bandwidth);
+                if (bandwidthClass !== 'metric-good' && overallQuality === 'excellent') {
+                    overallQuality = bandwidthClass === 'metric-warning' ? 'good' : 'poor';
+                }
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Bandwidth:</span>
+                        <span class="metric-value ${bandwidthClass}">${qualityData.bandwidth} kbps</span>
+                    </div>
+                `;
+            }
+            
+            if (qualityData.packetLoss !== null) {
+                const lossClass = getPacketLossClass(qualityData.packetLoss);
+                if (lossClass !== 'metric-good' && overallQuality !== 'poor') {
+                    overallQuality = lossClass === 'metric-warning' ? 'good' : 'poor';
+                }
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Packet Loss:</span>
+                        <span class="metric-value ${lossClass}">${qualityData.packetLoss}</span>
+                    </div>
+                `;
+            }
+            
+            // Add overall quality indicator
+            html = `
+                <div class="metric-item">
+                    <span><span class="quality-indicator quality-${overallQuality}"></span>Overall Quality:</span>
+                    <span class="metric-value">${overallQuality.charAt(0).toUpperCase() + overallQuality.slice(1)}</span>
+                </div>
+            ` + html;
+            
+            qualityInfo.innerHTML = html;
+            qualityContainer.style.display = 'block';
+        };
+        
+        /**
+         * Gets CSS class for RTT based on quality thresholds
+         */
+        const getRTTClass = (rtt) => {
+            if (rtt < 100) return 'metric-good';
+            if (rtt < 300) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Gets CSS class for bandwidth based on quality thresholds
+         */
+        const getBandwidthClass = (bandwidth) => {
+            if (bandwidth > 1000) return 'metric-good';
+            if (bandwidth > 500) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Gets CSS class for packet loss based on quality thresholds
+         */
+        const getPacketLossClass = (packetLoss) => {
+            if (packetLoss === 0) return 'metric-good';
+            if (packetLoss < 5) return 'metric-warning';
+            return 'metric-poor';
+        };
+        
+        /**
+         * Hides performance metrics display
+         */
+        const hidePerformanceMetrics = () => {
+            const metricsContainer = document.getElementById('performance-metrics');
+            if (metricsContainer) {
+                metricsContainer.style.display = 'none';
+            }
+        };
+        
+        /**
+         * Hides connection quality display
+         */
+        const hideConnectionQuality = () => {
+            const qualityContainer = document.getElementById('connection-quality');
+            if (qualityContainer) {
+                qualityContainer.style.display = 'none';
+            }
+        };
+        
+        /**
+         * Logs performance metrics for deployment analysis
+         */
+        const logPerformanceMetrics = () => {
+            const metrics = {
+                timestamp: new Date().toISOString(),
+                pageLoadTime: performanceMetrics.pageLoadEnd - performanceMetrics.pageLoadStart,
+                connectionTime: performanceMetrics.connectionEndTime && performanceMetrics.connectionStartTime 
+                    ? performanceMetrics.connectionEndTime - performanceMetrics.connectionStartTime 
+                    : null,
+                memoryUsage: performance.memory ? performance.memory.usedJSHeapSize : null,
+                connectionQuality: performanceMetrics.connectionQuality,
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            };
+            
+            console.log('Performance Metrics:', metrics);
+            
+            // In a real deployment, this could send metrics to an analytics service
+            // For now, we'll just store in sessionStorage for debugging
+            try {
+                const existingMetrics = JSON.parse(sessionStorage.getItem('performanceMetrics') || '[]');
+                existingMetrics.push(metrics);
+                
+                // Keep only last 10 entries to avoid storage bloat
+                if (existingMetrics.length > 10) {
+                    existingMetrics.splice(0, existingMetrics.length - 10);
+                }
+                
+                sessionStorage.setItem('performanceMetrics', JSON.stringify(existingMetrics));
+            } catch (error) {
+                console.warn('Could not store performance metrics:', error);
+            }
         };
         
         // ===== CONNECTION STATUS MANAGEMENT =====
@@ -2911,6 +3536,9 @@
                 return null;
             }
             
+            // Record connection start time for performance monitoring
+            recordConnectionStart();
+            
             // Create connection to target peer
             const conn = peer.connect(peerId);
             
@@ -3078,6 +3706,9 @@
          * Handles the connection open event when a connection is successfully established
          */
         const handleConnectionOpen = () => {
+            // Record connection completion time for performance monitoring
+            recordConnectionEnd();
+            
             updateConnectionStatus('connected', 'Connected');
             hideNetworkDiagnostics();
             enableSendButton();
@@ -3085,12 +3716,18 @@
             // Add connection success message with network info
             addSystemMessage('✅ Peer-to-peer connection established successfully!');
             
+            // Start performance monitoring for connection quality
+            startPerformanceMonitoring();
+            
             // Show connection quality information using modern optional chaining
             if (connection?.peerConnection) {
                 setTimeout(() => {
                     showConnectionQualityInfo();
                 }, 2000);
             }
+            
+            // Log performance metrics
+            logPerformanceMetrics();
         };
         
         /**
@@ -3173,6 +3810,10 @@
          * Cleans up connection state and UI when a connection ends
          */
         const cleanupConnection = () => {
+            // Stop performance monitoring
+            stopPerformanceMonitoring();
+            stopMemoryMonitoring();
+            
             // Clear any active timeouts
             if (connectionTimeout) {
                 clearTimeout(connectionTimeout);
@@ -3186,7 +3827,9 @@
             const cleanupActions = [
                 disableSendButton,
                 hideConnectionProgress,
-                hideNetworkDiagnostics
+                hideNetworkDiagnostics,
+                hidePerformanceMetrics,
+                hideConnectionQuality
             ];
             cleanupActions.forEach(action => action());
             
@@ -3391,6 +4034,9 @@
             // Initialize connection status
             updateConnectionStatus('disconnected', 'Initializing...');
             
+            // Start memory monitoring
+            startMemoryMonitoring();
+            
             // Display HTTPS deployment status
             addSystemMessage('🚀 WebRTC PeerJS Chat - Initializing...');
             
@@ -3436,6 +4082,9 @@
         
         // Initialize application when DOM is ready using modern patterns
         const initializeWhenReady = () => {
+            // Record page load completion time
+            recordPageLoadTime();
+            
             initializeApplication();
             initializeTestFramework();
         };
@@ -3446,6 +4095,14 @@
             // DOM is already ready
             initializeWhenReady();
         }
+        
+        // Additional performance optimization: record when all resources are loaded
+        window.addEventListener('load', () => {
+            // Log final performance metrics after all resources are loaded
+            setTimeout(() => {
+                logPerformanceMetrics();
+            }, 1000);
+        });
         
     </script>
 </body>
