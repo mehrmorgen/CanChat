@@ -1984,6 +1984,85 @@
         });
         
         describe('Deployment Monitoring and Health Checks', () => {
+            test('should initialize deployment monitoring system', () => {
+                expect(typeof initializeDeploymentMonitoring).toBe('function');
+                expect(typeof deploymentMonitor).toBe('object');
+                expect(typeof DEPLOYMENT_CONFIG).toBe('object');
+                
+                // Verify configuration values
+                expect(DEPLOYMENT_CONFIG.GITHUB_PAGES_URL).toBe('https://mehrmorgen.github.io/CanChat/chat.html');
+                expect(DEPLOYMENT_CONFIG.HEALTH_CHECK_INTERVAL).toBe(300000);
+                expect(DEPLOYMENT_CONFIG.CONCURRENT_USER_LIMIT).toBe(100);
+            });
+            
+            test('should have deployment status checking functionality', () => {
+                expect(typeof startDeploymentStatusChecking).toBe('function');
+                expect(typeof checkExternalResourcesHealth).toBe('function');
+                expect(typeof getDeploymentStatus).toBe('function');
+                
+                const status = getDeploymentStatus();
+                expect(typeof status.isActive).toBe('boolean');
+                expect(typeof status.uptime).toBe('number');
+                expect(typeof status.performanceMetrics).toBe('object');
+            });
+            
+            test('should have error reporting and logging system', () => {
+                expect(typeof reportDeploymentError).toBe('function');
+                expect(typeof logDeploymentEvent).toBe('function');
+                expect(typeof processErrorQueue).toBe('function');
+                
+                // Test error reporting
+                const testError = {
+                    type: 'test_error',
+                    message: 'Test error message',
+                    timestamp: new Date().toISOString()
+                };
+                
+                const initialErrorCount = deploymentMonitor.performanceMetrics.errorCount;
+                reportDeploymentError(testError);
+                expect(deploymentMonitor.performanceMetrics.errorCount).toBe(initialErrorCount + 1);
+                expect(deploymentMonitor.errorQueue.length).toBeGreaterThan(0);
+            });
+            
+            test('should have version tracking and deployment history', () => {
+                expect(typeof startVersionTracking).toBe('function');
+                expect(deploymentMonitor.currentVersion).not.toBeNull();
+                expect(Array.isArray(deploymentMonitor.deploymentHistory)).toBe(true);
+                expect(deploymentMonitor.deploymentHistory.length).toBeGreaterThan(0);
+            });
+            
+            test('should have maintenance mode handling', () => {
+                expect(typeof enterMaintenanceMode).toBe('function');
+                expect(typeof exitMaintenanceMode).toBe('function');
+                expect(typeof startMaintenanceModeHandling).toBe('function');
+                expect(typeof deploymentMonitor.maintenanceMode).toBe('boolean');
+            });
+            
+            test('should have rollback procedures', () => {
+                expect(typeof implementRollbackProcedures).toBe('function');
+                expect(typeof window.testRollback).toBe('function');
+                expect(typeof window.deploymentMonitor.testRollback).toBe('function');
+            });
+            
+            test('should monitor concurrent users and performance', () => {
+                expect(typeof startConcurrentUserMonitoring).toBe('function');
+                expect(typeof startPerformanceDegradationMonitoring).toBe('function');
+                expect(typeof deploymentMonitor.concurrentUsers).toBe('number');
+                expect(deploymentMonitor.concurrentUsers).toBeGreaterThanOrEqual(0);
+            });
+            
+            test('should have performance thresholds configured', () => {
+                const thresholds = DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD;
+                expect(typeof thresholds.PAGE_LOAD_TIME).toBe('number');
+                expect(typeof thresholds.CONNECTION_TIME).toBe('number');
+                expect(typeof thresholds.MEMORY_USAGE).toBe('number');
+                expect(typeof thresholds.ERROR_RATE).toBe('number');
+                
+                expect(thresholds.PAGE_LOAD_TIME).toBe(5000);
+                expect(thresholds.CONNECTION_TIME).toBe(10000);
+                expect(thresholds.ERROR_RATE).toBe(0.05);
+            });
+            
             asyncTest('should verify external dependency health', () => {
                 const dependencies = [
                     { name: 'PeerJS CDN', url: 'https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js' },
@@ -2054,6 +2133,106 @@
                 expect(versionInfo.features.peerjs).toBe(true);
                 expect(versionInfo.features.es2020).toBe(true);
             }, 1000);
+            
+            test('should test maintenance mode functionality', () => {
+                // Test entering maintenance mode
+                const initialMaintenanceState = deploymentMonitor.maintenanceMode;
+                
+                enterMaintenanceMode('Test maintenance mode');
+                expect(deploymentMonitor.maintenanceMode).toBe(true);
+                
+                // Check if maintenance banner is displayed
+                const banner = document.getElementById('maintenance-banner');
+                expect(banner).not.toBeNull();
+                expect(banner.textContent).toContain('Test maintenance mode');
+                
+                // Test exiting maintenance mode
+                exitMaintenanceMode();
+                expect(deploymentMonitor.maintenanceMode).toBe(false);
+                
+                // Check if banner is removed
+                const removedBanner = document.getElementById('maintenance-banner');
+                expect(removedBanner).toBeNull();
+            });
+            
+            test('should test error rate threshold monitoring', () => {
+                // Reset error metrics
+                deploymentMonitor.performanceMetrics.errorCount = 0;
+                deploymentMonitor.performanceMetrics.totalRequests = 100;
+                
+                // Simulate errors below threshold
+                for (let i = 0; i < 3; i++) {
+                    reportDeploymentError({
+                        type: 'test_error',
+                        message: `Test error ${i}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Should not trigger maintenance mode (3% error rate)
+                expect(deploymentMonitor.maintenanceMode).toBe(false);
+                
+                // Simulate high error rate
+                for (let i = 0; i < 25; i++) {
+                    reportDeploymentError({
+                        type: 'high_error_test',
+                        message: `High error test ${i}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Should trigger maintenance mode (28% error rate)
+                expect(deploymentMonitor.maintenanceMode).toBe(true);
+                
+                // Clean up
+                exitMaintenanceMode();
+            });
+            
+            test('should test concurrent user monitoring', () => {
+                const initialUsers = deploymentMonitor.concurrentUsers;
+                
+                // Simulate user activity
+                document.dispatchEvent(new Event('visibilitychange'));
+                
+                expect(typeof deploymentMonitor.concurrentUsers).toBe('number');
+                expect(deploymentMonitor.concurrentUsers).toBeGreaterThanOrEqual(0);
+                expect(deploymentMonitor.concurrentUsers).toBeLessThanOrEqual(DEPLOYMENT_CONFIG.CONCURRENT_USER_LIMIT);
+            });
+            
+            asyncTest('should test performance degradation monitoring', () => {
+                // Test memory monitoring if available
+                if ('memory' in performance) {
+                    const memInfo = performance.memory;
+                    expect(typeof memInfo.usedJSHeapSize).toBe('number');
+                    expect(memInfo.usedJSHeapSize).toBeGreaterThan(0);
+                    
+                    // Check if memory usage is being tracked
+                    expect(Array.isArray(deploymentMonitor.performanceMetrics.memoryUsage)).toBe(true);
+                }
+                
+                // Test connection time tracking
+                expect(Array.isArray(deploymentMonitor.performanceMetrics.connectionTimes)).toBe(true);
+                
+                // Test page load time recording
+                expect(typeof deploymentMonitor.performanceMetrics.pageLoadTime).toBe('number');
+                expect(deploymentMonitor.performanceMetrics.pageLoadTime).toBeGreaterThan(0);
+            }, 1000);
+            
+            test('should test deployment monitoring controls', () => {
+                // Test global deployment monitor interface
+                expect(typeof window.deploymentMonitor).toBe('object');
+                expect(typeof window.deploymentMonitor.getStatus).toBe('function');
+                expect(typeof window.deploymentMonitor.stop).toBe('function');
+                expect(typeof window.deploymentMonitor.enterMaintenance).toBe('function');
+                expect(typeof window.deploymentMonitor.exitMaintenance).toBe('function');
+                
+                // Test status retrieval
+                const status = window.deploymentMonitor.getStatus();
+                expect(typeof status.isActive).toBe('boolean');
+                expect(typeof status.uptime).toBe('number');
+                expect(typeof status.performanceMetrics).toBe('object');
+                expect(typeof status.errorQueueSize).toBe('number');
+            });
         });
         
         // ===== INITIAL FAILING TESTS =====
@@ -5682,6 +5861,747 @@
             }
         };
         
+        // ===== DEPLOYMENT MONITORING AND MAINTENANCE TOOLS =====
+        
+        /**
+         * Deployment monitoring configuration and state
+         */
+        const DEPLOYMENT_CONFIG = {
+            GITHUB_PAGES_URL: 'https://mehrmorgen.github.io/CanChat/chat.html',
+            HEALTH_CHECK_INTERVAL: 300000, // 5 minutes
+            DEPENDENCY_CHECK_INTERVAL: 600000, // 10 minutes
+            ERROR_REPORT_BATCH_SIZE: 10,
+            VERSION_CHECK_INTERVAL: 3600000, // 1 hour
+            MAINTENANCE_CHECK_INTERVAL: 900000, // 15 minutes
+            CONCURRENT_USER_LIMIT: 100,
+            PERFORMANCE_THRESHOLD: {
+                PAGE_LOAD_TIME: 5000, // 5 seconds
+                CONNECTION_TIME: 10000, // 10 seconds
+                MEMORY_USAGE: 100 * 1024 * 1024, // 100MB
+                ERROR_RATE: 0.05 // 5%
+            }
+        };
+        
+        let deploymentMonitor = {
+            isActive: false,
+            healthCheckTimer: null,
+            dependencyCheckTimer: null,
+            versionCheckTimer: null,
+            maintenanceCheckTimer: null,
+            errorQueue: [],
+            performanceMetrics: {
+                pageLoadTime: null,
+                connectionTimes: [],
+                errorCount: 0,
+                totalRequests: 0,
+                memoryUsage: []
+            },
+            deploymentHistory: [],
+            currentVersion: null,
+            maintenanceMode: false,
+            concurrentUsers: 0
+        };
+        
+        /**
+         * Initializes deployment monitoring and maintenance tools
+         */
+        const initializeDeploymentMonitoring = () => {
+            console.log('🔧 Initializing deployment monitoring and maintenance tools...');
+            
+            // Check if running on GitHub Pages
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            
+            if (isGitHubPages) {
+                addSystemMessage('📊 Deployment monitoring active (GitHub Pages)');
+                deploymentMonitor.isActive = true;
+                
+                // Start all monitoring services
+                startDeploymentStatusChecking();
+                startDependencyHealthChecks();
+                startVersionTracking();
+                startMaintenanceModeHandling();
+                startPerformanceDegradationMonitoring();
+                
+                // Initialize error reporting
+                initializeErrorReporting();
+                
+                // Log deployment initialization
+                logDeploymentEvent('monitoring_initialized', {
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                });
+            } else {
+                addSystemMessage('🔧 Local development mode - limited monitoring active');
+                // Still run some monitoring for local development
+                startPerformanceDegradationMonitoring();
+                initializeErrorReporting();
+            }
+            
+            // Always monitor concurrent users and performance
+            startConcurrentUserMonitoring();
+            recordPageLoadTime();
+        };
+        
+        /**
+         * Starts deployment status checking to verify GitHub Pages availability
+         */
+        const startDeploymentStatusChecking = () => {
+            const checkDeploymentStatus = async () => {
+                try {
+                    // Check if current page is accessible
+                    const currentUrl = window.location.href;
+                    const isAccessible = document.readyState === 'complete';
+                    
+                    if (isAccessible) {
+                        logDeploymentEvent('health_check_passed', {
+                            timestamp: new Date().toISOString(),
+                            url: currentUrl,
+                            loadTime: performance.now()
+                        });
+                    } else {
+                        logDeploymentEvent('health_check_failed', {
+                            timestamp: new Date().toISOString(),
+                            url: currentUrl,
+                            error: 'Page not fully loaded'
+                        });
+                        
+                        reportDeploymentError({
+                            type: 'deployment_health',
+                            message: 'GitHub Pages health check failed',
+                            url: currentUrl,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                    
+                    // Check external resource accessibility
+                    await checkExternalResourcesHealth();
+                    
+                } catch (error) {
+                    console.error('Deployment status check failed:', error);
+                    reportDeploymentError({
+                        type: 'deployment_health',
+                        message: `Health check error: ${error.message}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            };
+            
+            // Run initial check
+            checkDeploymentStatus();
+            
+            // Schedule periodic checks
+            deploymentMonitor.healthCheckTimer = setInterval(
+                checkDeploymentStatus,
+                DEPLOYMENT_CONFIG.HEALTH_CHECK_INTERVAL
+            );
+        };
+        
+        /**
+         * Checks health of external resources (PeerJS, STUN servers)
+         */
+        const checkExternalResourcesHealth = async () => {
+            const dependencies = [
+                {
+                    name: 'PeerJS Library',
+                    check: () => typeof Peer === 'function',
+                    url: 'https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js'
+                },
+                {
+                    name: 'PeerJS Cloud Server',
+                    check: () => peer && peer.open,
+                    url: 'PeerJS signaling server'
+                },
+                {
+                    name: 'Google STUN Server',
+                    check: async () => {
+                        try {
+                            const pc = new RTCPeerConnection({
+                                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                            });
+                            pc.createDataChannel('test');
+                            await pc.createOffer();
+                            pc.close();
+                            return true;
+                        } catch {
+                            return false;
+                        }
+                    },
+                    url: 'stun:stun.l.google.com:19302'
+                }
+            ];
+            
+            for (const dependency of dependencies) {
+                try {
+                    const isHealthy = await dependency.check();
+                    
+                    if (isHealthy) {
+                        logDeploymentEvent('dependency_healthy', {
+                            name: dependency.name,
+                            url: dependency.url,
+                            timestamp: new Date().toISOString()
+                        });
+                    } else {
+                        logDeploymentEvent('dependency_unhealthy', {
+                            name: dependency.name,
+                            url: dependency.url,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        reportDeploymentError({
+                            type: 'dependency_failure',
+                            message: `${dependency.name} health check failed`,
+                            dependency: dependency.name,
+                            url: dependency.url,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                } catch (error) {
+                    reportDeploymentError({
+                        type: 'dependency_error',
+                        message: `Error checking ${dependency.name}: ${error.message}`,
+                        dependency: dependency.name,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
+        };
+        
+        /**
+         * Starts automated health checks for external dependencies
+         */
+        const startDependencyHealthChecks = () => {
+            deploymentMonitor.dependencyCheckTimer = setInterval(
+                checkExternalResourcesHealth,
+                DEPLOYMENT_CONFIG.DEPENDENCY_CHECK_INTERVAL
+            );
+        };
+        
+        /**
+         * Initializes error reporting and logging system
+         */
+        const initializeErrorReporting = () => {
+            // Capture unhandled errors
+            window.addEventListener('error', (event) => {
+                reportDeploymentError({
+                    type: 'javascript_error',
+                    message: event.message,
+                    filename: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno,
+                    stack: event.error?.stack,
+                    timestamp: new Date().toISOString()
+                });
+            });
+            
+            // Capture unhandled promise rejections
+            window.addEventListener('unhandledrejection', (event) => {
+                reportDeploymentError({
+                    type: 'promise_rejection',
+                    message: event.reason?.message || 'Unhandled promise rejection',
+                    stack: event.reason?.stack,
+                    timestamp: new Date().toISOString()
+                });
+            });
+            
+            // Capture WebRTC specific errors
+            const originalRTCPeerConnection = window.RTCPeerConnection;
+            window.RTCPeerConnection = function(...args) {
+                const pc = new originalRTCPeerConnection(...args);
+                
+                pc.addEventListener('icecandidateerror', (event) => {
+                    reportDeploymentError({
+                        type: 'webrtc_ice_error',
+                        message: `ICE candidate error: ${event.errorText}`,
+                        errorCode: event.errorCode,
+                        url: event.url,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+                
+                return pc;
+            };
+        };
+        
+        /**
+         * Reports deployment-specific errors to the logging system
+         */
+        const reportDeploymentError = (error) => {
+            // Add to error queue
+            deploymentMonitor.errorQueue.push(error);
+            deploymentMonitor.performanceMetrics.errorCount++;
+            
+            // Log to console for debugging
+            console.error('Deployment Error:', error);
+            
+            // Show user-friendly error message for critical errors
+            if (error.type === 'deployment_health' || error.type === 'dependency_failure') {
+                addSystemMessage(`⚠️ ${error.message}`);
+            }
+            
+            // Process error queue if it reaches batch size
+            if (deploymentMonitor.errorQueue.length >= DEPLOYMENT_CONFIG.ERROR_REPORT_BATCH_SIZE) {
+                processErrorQueue();
+            }
+            
+            // Check if error rate exceeds threshold
+            checkErrorRateThreshold();
+        };
+        
+        /**
+         * Processes the error queue and logs errors
+         */
+        const processErrorQueue = () => {
+            const errors = deploymentMonitor.errorQueue.splice(0);
+            
+            logDeploymentEvent('error_batch_processed', {
+                errorCount: errors.length,
+                errors: errors,
+                timestamp: new Date().toISOString()
+            });
+        };
+        
+        /**
+         * Checks if error rate exceeds performance threshold
+         */
+        const checkErrorRateThreshold = () => {
+            const { errorCount, totalRequests } = deploymentMonitor.performanceMetrics;
+            const errorRate = totalRequests > 0 ? errorCount / totalRequests : 0;
+            
+            if (errorRate > DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.ERROR_RATE) {
+                logDeploymentEvent('error_rate_exceeded', {
+                    errorRate: errorRate,
+                    threshold: DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.ERROR_RATE,
+                    errorCount: errorCount,
+                    totalRequests: totalRequests,
+                    timestamp: new Date().toISOString()
+                });
+                
+                addSystemMessage(`⚠️ High error rate detected: ${(errorRate * 100).toFixed(1)}%`);
+                
+                // Consider entering maintenance mode if error rate is very high
+                if (errorRate > 0.2) { // 20% error rate
+                    enterMaintenanceMode('High error rate detected');
+                }
+            }
+        };
+        
+        /**
+         * Starts version tracking and deployment history logging
+         */
+        const startVersionTracking = () => {
+            // Generate version based on current timestamp and page content
+            const generateVersion = () => {
+                const timestamp = new Date().toISOString();
+                const contentHash = btoa(document.documentElement.outerHTML).slice(0, 8);
+                return `${timestamp.split('T')[0]}-${contentHash}`;
+            };
+            
+            deploymentMonitor.currentVersion = generateVersion();
+            
+            // Log current deployment
+            const deploymentInfo = {
+                version: deploymentMonitor.currentVersion,
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                referrer: document.referrer,
+                loadTime: performance.now()
+            };
+            
+            deploymentMonitor.deploymentHistory.push(deploymentInfo);
+            
+            logDeploymentEvent('version_tracked', deploymentInfo);
+            
+            // Periodic version checking (in case of hot deployments)
+            deploymentMonitor.versionCheckTimer = setInterval(() => {
+                const newVersion = generateVersion();
+                if (newVersion !== deploymentMonitor.currentVersion) {
+                    logDeploymentEvent('version_changed', {
+                        oldVersion: deploymentMonitor.currentVersion,
+                        newVersion: newVersion,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    deploymentMonitor.currentVersion = newVersion;
+                    addSystemMessage('🔄 Application updated - consider refreshing for latest version');
+                }
+            }, DEPLOYMENT_CONFIG.VERSION_CHECK_INTERVAL);
+        };
+        
+        /**
+         * Starts maintenance mode handling for planned outages or updates
+         */
+        const startMaintenanceModeHandling = () => {
+            // Check for maintenance mode indicators
+            const checkMaintenanceMode = () => {
+                // Check for maintenance indicators in URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const maintenanceParam = urlParams.get('maintenance');
+                
+                // Check for high error rates or system issues
+                const { errorCount, totalRequests } = deploymentMonitor.performanceMetrics;
+                const errorRate = totalRequests > 0 ? errorCount / totalRequests : 0;
+                
+                if (maintenanceParam === 'true' || errorRate > 0.3) {
+                    if (!deploymentMonitor.maintenanceMode) {
+                        enterMaintenanceMode('Scheduled maintenance or high error rate');
+                    }
+                } else if (deploymentMonitor.maintenanceMode) {
+                    exitMaintenanceMode();
+                }
+            };
+            
+            // Initial check
+            checkMaintenanceMode();
+            
+            // Periodic maintenance mode checking
+            deploymentMonitor.maintenanceCheckTimer = setInterval(
+                checkMaintenanceMode,
+                DEPLOYMENT_CONFIG.MAINTENANCE_CHECK_INTERVAL
+            );
+        };
+        
+        /**
+         * Enters maintenance mode with user notification
+         */
+        const enterMaintenanceMode = (reason) => {
+            deploymentMonitor.maintenanceMode = true;
+            
+            logDeploymentEvent('maintenance_mode_entered', {
+                reason: reason,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Show maintenance mode UI
+            const maintenanceHtml = `
+                <div id="maintenance-banner" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    background: linear-gradient(135deg, #ffc107, #e0a800);
+                    color: #333;
+                    padding: 1rem;
+                    text-align: center;
+                    z-index: 9999;
+                    font-weight: 600;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                ">
+                    🔧 Maintenance Mode Active - ${reason}
+                    <button onclick="this.parentElement.style.display='none'" style="
+                        margin-left: 1rem;
+                        background: transparent;
+                        border: 1px solid #333;
+                        color: #333;
+                        padding: 0.25rem 0.5rem;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    ">Dismiss</button>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('afterbegin', maintenanceHtml);
+            
+            // Adjust body padding to account for banner
+            document.body.style.paddingTop = '60px';
+            
+            addSystemMessage(`🔧 Maintenance mode activated: ${reason}`);
+        };
+        
+        /**
+         * Exits maintenance mode and restores normal operation
+         */
+        const exitMaintenanceMode = () => {
+            deploymentMonitor.maintenanceMode = false;
+            
+            logDeploymentEvent('maintenance_mode_exited', {
+                timestamp: new Date().toISOString()
+            });
+            
+            // Remove maintenance mode UI
+            const banner = document.getElementById('maintenance-banner');
+            if (banner) {
+                banner.remove();
+                document.body.style.paddingTop = '';
+            }
+            
+            addSystemMessage('✅ Maintenance mode deactivated - normal operation resumed');
+        };
+        
+        /**
+         * Implements rollback procedures for deployment issues
+         */
+        const implementRollbackProcedures = () => {
+            // Create rollback testing function
+            window.testRollback = () => {
+                console.log('🔄 Testing rollback procedures...');
+                
+                // Simulate rollback by clearing all state and reinitializing
+                const rollbackSteps = [
+                    () => {
+                        console.log('1. Clearing connection state...');
+                        if (connection) {
+                            connection.close();
+                            connection = null;
+                        }
+                    },
+                    () => {
+                        console.log('2. Resetting peer connection...');
+                        if (peer) {
+                            peer.destroy();
+                            peer = null;
+                        }
+                    },
+                    () => {
+                        console.log('3. Clearing UI state...');
+                        document.getElementById('chat-log').value = '';
+                        document.getElementById('my-id').textContent = 'Connecting...';
+                        updateConnectionStatus('disconnected', 'Disconnected');
+                    },
+                    () => {
+                        console.log('4. Reinitializing application...');
+                        setTimeout(() => {
+                            initializePeer();
+                        }, 1000);
+                    }
+                ];
+                
+                // Execute rollback steps with delays
+                rollbackSteps.forEach((step, index) => {
+                    setTimeout(step, index * 500);
+                });
+                
+                logDeploymentEvent('rollback_executed', {
+                    timestamp: new Date().toISOString(),
+                    reason: 'Manual rollback test'
+                });
+                
+                addSystemMessage('🔄 Rollback procedure executed - reinitializing...');
+            };
+            
+            // Add rollback button to test results section (for debugging)
+            if (window.location.hostname === 'localhost') {
+                const testOutput = document.getElementById('test-output');
+                if (testOutput) {
+                    const rollbackButton = document.createElement('button');
+                    rollbackButton.textContent = 'Test Rollback';
+                    rollbackButton.onclick = window.testRollback;
+                    rollbackButton.style.marginTop = '10px';
+                    rollbackButton.style.padding = '8px 16px';
+                    rollbackButton.style.backgroundColor = '#dc3545';
+                    rollbackButton.style.color = 'white';
+                    rollbackButton.style.border = 'none';
+                    rollbackButton.style.borderRadius = '4px';
+                    rollbackButton.style.cursor = 'pointer';
+                    
+                    testOutput.appendChild(rollbackButton);
+                }
+            }
+        };
+        
+        /**
+         * Starts monitoring for concurrent user limits and performance degradation
+         */
+        const startConcurrentUserMonitoring = () => {
+            // Simulate concurrent user tracking (in real deployment, this would be server-side)
+            const updateConcurrentUsers = () => {
+                // Estimate based on connection activity and page visibility
+                const isVisible = !document.hidden;
+                const hasActiveConnection = connection && connection.open;
+                
+                if (isVisible && hasActiveConnection) {
+                    deploymentMonitor.concurrentUsers = Math.min(
+                        deploymentMonitor.concurrentUsers + 1,
+                        DEPLOYMENT_CONFIG.CONCURRENT_USER_LIMIT
+                    );
+                } else if (!isVisible) {
+                    deploymentMonitor.concurrentUsers = Math.max(
+                        deploymentMonitor.concurrentUsers - 1,
+                        0
+                    );
+                }
+                
+                // Check if approaching user limit
+                if (deploymentMonitor.concurrentUsers > DEPLOYMENT_CONFIG.CONCURRENT_USER_LIMIT * 0.8) {
+                    logDeploymentEvent('high_concurrent_users', {
+                        currentUsers: deploymentMonitor.concurrentUsers,
+                        limit: DEPLOYMENT_CONFIG.CONCURRENT_USER_LIMIT,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    addSystemMessage(`⚠️ High user activity detected (${deploymentMonitor.concurrentUsers} users)`);
+                }
+            };
+            
+            // Monitor page visibility changes
+            document.addEventListener('visibilitychange', updateConcurrentUsers);
+            
+            // Periodic user count updates
+            setInterval(updateConcurrentUsers, 30000); // Every 30 seconds
+        };
+        
+        /**
+         * Starts performance degradation monitoring
+         */
+        const startPerformanceDegradationMonitoring = () => {
+            // Monitor memory usage
+            const monitorMemoryUsage = () => {
+                if ('memory' in performance) {
+                    const memInfo = performance.memory;
+                    const currentUsage = memInfo.usedJSHeapSize;
+                    
+                    deploymentMonitor.performanceMetrics.memoryUsage.push({
+                        timestamp: Date.now(),
+                        usage: currentUsage
+                    });
+                    
+                    // Keep only last 100 measurements
+                    if (deploymentMonitor.performanceMetrics.memoryUsage.length > 100) {
+                        deploymentMonitor.performanceMetrics.memoryUsage.shift();
+                    }
+                    
+                    // Check for memory threshold
+                    if (currentUsage > DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.MEMORY_USAGE) {
+                        logDeploymentEvent('memory_threshold_exceeded', {
+                            currentUsage: currentUsage,
+                            threshold: DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.MEMORY_USAGE,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        addSystemMessage(`⚠️ High memory usage: ${Math.round(currentUsage / 1024 / 1024)}MB`);
+                    }
+                }
+            };
+            
+            // Monitor connection establishment times
+            const originalInitiateConnection = window.initiateConnection || (() => {});
+            window.initiateConnection = function(peerId) {
+                const startTime = Date.now();
+                const result = originalInitiateConnection.call(this, peerId);
+                
+                if (result) {
+                    result.on('open', () => {
+                        const connectionTime = Date.now() - startTime;
+                        deploymentMonitor.performanceMetrics.connectionTimes.push(connectionTime);
+                        
+                        // Keep only last 50 measurements
+                        if (deploymentMonitor.performanceMetrics.connectionTimes.length > 50) {
+                            deploymentMonitor.performanceMetrics.connectionTimes.shift();
+                        }
+                        
+                        // Check connection time threshold
+                        if (connectionTime > DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.CONNECTION_TIME) {
+                            logDeploymentEvent('slow_connection', {
+                                connectionTime: connectionTime,
+                                threshold: DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.CONNECTION_TIME,
+                                timestamp: new Date().toISOString()
+                            });
+                            
+                            addSystemMessage(`⚠️ Slow connection: ${Math.round(connectionTime/1000)}s`);
+                        }
+                    });
+                }
+                
+                return result;
+            };
+            
+            // Start memory monitoring
+            setInterval(monitorMemoryUsage, 60000); // Every minute
+        };
+        
+        /**
+         * Records page load time for performance monitoring
+         */
+        const recordPageLoadTime = () => {
+            const loadTime = performance.now();
+            deploymentMonitor.performanceMetrics.pageLoadTime = loadTime;
+            
+            logDeploymentEvent('page_load_time', {
+                loadTime: loadTime,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Check page load time threshold
+            if (loadTime > DEPLOYMENT_CONFIG.PERFORMANCE_THRESHOLD.PAGE_LOAD_TIME) {
+                addSystemMessage(`⚠️ Slow page load: ${Math.round(loadTime/1000)}s`);
+            }
+        };
+        
+        /**
+         * Logs deployment events to console and internal storage
+         */
+        const logDeploymentEvent = (eventType, data) => {
+            const logEntry = {
+                type: eventType,
+                data: data,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+            
+            // Log to console with appropriate level
+            const logLevel = eventType.includes('error') || eventType.includes('failed') ? 'error' :
+                           eventType.includes('warning') || eventType.includes('exceeded') ? 'warn' : 'log';
+            
+            console[logLevel](`[DEPLOYMENT] ${eventType}:`, data);
+            
+            // Store in deployment history (keep last 1000 events)
+            deploymentMonitor.deploymentHistory.push(logEntry);
+            if (deploymentMonitor.deploymentHistory.length > 1000) {
+                deploymentMonitor.deploymentHistory.shift();
+            }
+        };
+        
+        /**
+         * Provides deployment monitoring status and metrics
+         */
+        const getDeploymentStatus = () => {
+            return {
+                isActive: deploymentMonitor.isActive,
+                currentVersion: deploymentMonitor.currentVersion,
+                maintenanceMode: deploymentMonitor.maintenanceMode,
+                concurrentUsers: deploymentMonitor.concurrentUsers,
+                performanceMetrics: deploymentMonitor.performanceMetrics,
+                errorQueueSize: deploymentMonitor.errorQueue.length,
+                deploymentHistorySize: deploymentMonitor.deploymentHistory.length,
+                uptime: performance.now()
+            };
+        };
+        
+        /**
+         * Stops all deployment monitoring services
+         */
+        const stopDeploymentMonitoring = () => {
+            const timers = [
+                'healthCheckTimer',
+                'dependencyCheckTimer',
+                'versionCheckTimer',
+                'maintenanceCheckTimer'
+            ];
+            
+            timers.forEach(timer => {
+                if (deploymentMonitor[timer]) {
+                    clearInterval(deploymentMonitor[timer]);
+                    deploymentMonitor[timer] = null;
+                }
+            });
+            
+            deploymentMonitor.isActive = false;
+            
+            logDeploymentEvent('monitoring_stopped', {
+                timestamp: new Date().toISOString()
+            });
+        };
+        
+        // Expose deployment monitoring functions globally for debugging
+        window.deploymentMonitor = {
+            getStatus: getDeploymentStatus,
+            stop: stopDeploymentMonitoring,
+            enterMaintenance: enterMaintenanceMode,
+            exitMaintenance: exitMaintenanceMode,
+            testRollback: () => window.testRollback?.()
+        };
+        
         // ===== EVENT LISTENERS SETUP =====
         
         /**
@@ -5793,6 +6713,9 @@
             
             initializePeer();
             setupEventListeners();
+            
+            // Initialize rollback procedures for deployment issues
+            implementRollbackProcedures();
         };
         
         /**
@@ -5827,6 +6750,9 @@
                     console.log('Performance Observer not fully supported');
                 }
             }
+            
+            // Initialize deployment monitoring and maintenance tools
+            initializeDeploymentMonitoring();
             
             // Record page load completion time
             recordPageLoadTime();
