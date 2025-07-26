@@ -11,14 +11,16 @@
     <link rel="dns-prefetch" href="//0.peerjs.com">
     <link rel="dns-prefetch" href="//stun.l.google.com">
     <style>
-        /* Modern CSS Reset and Base Styles */
+        /* Modern CSS Reset and Base Styles - Enhanced for Mobile-First */
         *, *::before, *::after {
             box-sizing: border-box;
         }
         
         :root {
+            /* Enhanced CSS Custom Properties for modern browsers */
             --primary-color: #007bff;
             --primary-hover: #0056b3;
+            --primary-active: #004085;
             --success-color: #28a745;
             --warning-color: #ffc107;
             --danger-color: #dc3545;
@@ -28,197 +30,449 @@
             --border-color: #dee2e6;
             --text-color: #333;
             --text-muted: #6c757d;
+            
+            /* Enhanced spacing system using CSS Custom Properties */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-xxl: 3rem;
+            
+            /* Enhanced border radius system */
+            --border-radius-sm: 4px;
             --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --border-radius-xl: 16px;
+            
+            /* Enhanced shadow system */
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
             --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.15);
+            --shadow-xl: 0 16px 32px rgba(0,0,0,0.2);
+            
+            /* Enhanced transition system */
+            --transition-fast: all 0.15s ease;
             --transition: all 0.3s ease;
+            --transition-slow: all 0.5s ease;
+            
+            /* Mobile-first typography scale */
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --font-size-2xl: 1.5rem;
+            --font-size-3xl: 1.875rem;
+            --font-size-4xl: 2.25rem;
+            
+            /* Enhanced mobile-first breakpoints */
+            --breakpoint-sm: 480px;
+            --breakpoint-md: 768px;
+            --breakpoint-lg: 1024px;
+            --breakpoint-xl: 1280px;
         }
         
+        /* Enhanced mobile-first body with modern CSS features */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
-            padding: 1rem;
+            padding: var(--spacing-md);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            min-height: 100dvh; /* Modern dynamic viewport height for mobile */
             color: var(--text-color);
             line-height: 1.6;
+            
+            /* Enhanced mobile performance */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            
+            /* Modern CSS Grid for body layout */
+            display: grid;
+            grid-template-rows: 1fr;
+            grid-template-columns: 1fr;
+            place-items: center;
         }
         
-        /* Mobile-first responsive container */
+        /* Enhanced mobile-first responsive container using CSS Grid */
         .container {
             background: var(--white);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 1.5rem;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: var(--spacing-lg);
+            width: 100%;
             max-width: 100%;
-            margin: 0 auto;
+            margin: 0;
             transition: var(--transition);
+            
+            /* Modern CSS Grid layout */
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: var(--spacing-lg);
+            min-height: calc(100vh - 2rem);
+            min-height: calc(100dvh - 2rem); /* Modern dynamic viewport */
+            
+            /* Enhanced mobile touch targets */
+            touch-action: manipulation;
         }
         
-        /* Tablet styles */
-        @media (min-width: 768px) {
+        /* Enhanced responsive breakpoints using modern CSS */
+        @media (min-width: 480px) {
             body {
-                padding: 2rem;
+                padding: var(--spacing-lg);
             }
             
             .container {
-                padding: 2rem;
-                max-width: 600px;
+                padding: var(--spacing-xl);
+                border-radius: var(--border-radius-xl);
+                box-shadow: var(--shadow-lg);
             }
         }
         
-        /* Desktop styles */
+        @media (min-width: 768px) {
+            body {
+                padding: var(--spacing-xl);
+            }
+            
+            .container {
+                max-width: 600px;
+                padding: var(--spacing-xl);
+                min-height: auto;
+            }
+        }
+        
         @media (min-width: 1024px) {
             .container {
                 max-width: 800px;
-                padding: 2.5rem;
+                padding: var(--spacing-xxl);
             }
         }
         
-        /* Modern browser upgrade warning styles */
+        @media (min-width: 1280px) {
+            .container {
+                max-width: 900px;
+            }
+        }
+        
+        /* Enhanced modern browser upgrade warning with mobile-first design */
         .browser-warning {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(8px); /* Modern backdrop filter */
             color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             z-index: 10000;
-            padding: 2rem;
+            padding: var(--spacing-md);
+            
+            /* Modern CSS Grid for centering */
+            display: grid;
+            place-items: center;
             text-align: center;
+            
+            /* Enhanced mobile scrolling */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .browser-warning-content {
+            width: 100%;
             max-width: 600px;
             background: var(--white);
             color: var(--text-color);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-xl);
+            
+            /* Modern CSS Grid layout */
+            display: grid;
+            gap: var(--spacing-lg);
+            
+            /* Enhanced mobile performance */
+            will-change: transform;
+            transform: translateZ(0);
         }
         
         .browser-warning h2 {
             color: var(--danger-color);
-            margin-bottom: 1rem;
+            margin: 0;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            line-height: 1.2;
         }
         
+        .browser-warning p {
+            margin: 0;
+            line-height: 1.6;
+            font-size: var(--font-size-base);
+        }
+        
+        .browser-warning ul {
+            text-align: left;
+            margin: 0;
+            padding-left: var(--spacing-lg);
+        }
+        
+        .browser-warning li {
+            margin-bottom: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+        }
+        
+        /* Enhanced browser download links using CSS Grid */
         .browser-links {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+        
+        @media (min-width: 480px) {
+            .browser-links {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .browser-links {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
         
         .browser-link {
-            display: block;
-            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
             background: var(--primary-color);
             color: white;
             text-decoration: none;
-            border-radius: var(--border-radius);
+            border-radius: var(--border-radius-lg);
             transition: var(--transition);
-            text-align: center;
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            min-height: 44px; /* Touch-friendly minimum */
+            
+            /* Enhanced mobile touch feedback */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         
-        .browser-link:hover {
+        .browser-link:hover,
+        .browser-link:focus {
             background: var(--primary-hover);
             transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
         
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .browser-link:active {
+            background: var(--primary-active);
+            transform: translateY(0);
         }
         
+        /* Enhanced mobile-specific warning styles */
+        .mobile-warning {
+            background: linear-gradient(135deg, var(--warning-color), #e0a800);
+            color: #333;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            margin-top: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+        
+        /* Remove duplicate container styles - already defined above with modern features */
+        
+        /* Enhanced mobile-first heading with modern CSS features */
         h1 {
             color: var(--text-color);
             text-align: center;
-            margin-bottom: 2rem;
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin: 0;
+            font-size: clamp(var(--font-size-xl), 4vw, var(--font-size-3xl));
             font-weight: 700;
+            line-height: 1.2;
+            
+            /* Enhanced gradient text with modern CSS */
             background: linear-gradient(135deg, var(--primary-color), #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            
+            /* Modern text rendering optimization */
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
         
-        /* Modern CSS Grid layout for sections */
+        /* Enhanced CSS Grid layout for sections with mobile-first approach */
         .sections-grid {
             display: grid;
-            gap: 1.5rem;
+            gap: var(--spacing-lg);
             grid-template-columns: 1fr;
+            
+            /* Modern CSS Grid auto-sizing */
+            grid-auto-rows: min-content;
+        }
+        
+        /* Enhanced responsive grid layout */
+        @media (min-width: 480px) {
+            .sections-grid {
+                gap: var(--spacing-xl);
+            }
         }
         
         @media (min-width: 768px) {
             .sections-grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-areas: 
+                    "peer-id connect"
+                    "chat chat";
             }
             
-            .section.chat-section {
-                grid-column: 1 / -1;
+            .section:nth-child(1) { grid-area: peer-id; }
+            .section:nth-child(2) { grid-area: connect; }
+            .section.chat-section { grid-area: chat; }
+        }
+        
+        @media (min-width: 1024px) {
+            .sections-grid {
+                grid-template-columns: 1fr 1.2fr;
+                grid-template-areas: 
+                    "peer-id connect"
+                    "chat chat";
             }
         }
         
+        /* Enhanced section styling with modern CSS Grid and Flexbox */
         .section {
             background: var(--light-bg);
-            border-radius: var(--border-radius);
-            padding: 1.5rem;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
             border: 1px solid var(--border-color);
             transition: var(--transition);
+            
+            /* Modern CSS Grid for internal layout */
+            display: grid;
+            gap: var(--spacing-md);
+            grid-template-rows: auto 1fr;
+            
+            /* Enhanced mobile performance */
+            will-change: transform, box-shadow;
+            transform: translateZ(0);
         }
         
-        .section:hover {
-            box-shadow: var(--shadow);
+        .section:hover,
+        .section:focus-within {
+            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
+            border-color: var(--primary-color);
         }
         
         .section h3 {
-            margin: 0 0 1rem 0;
+            margin: 0;
             color: var(--text-color);
-            font-size: 1.25rem;
+            font-size: var(--font-size-lg);
             font-weight: 600;
+            line-height: 1.3;
+            
+            /* Modern text rendering */
+            text-rendering: optimizeLegibility;
         }
         
-        /* Modern form controls using CSS Grid and Flexbox */
+        /* Enhanced responsive section padding */
+        @media (min-width: 480px) {
+            .section {
+                padding: var(--spacing-xl);
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .section {
+                padding: var(--spacing-lg);
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .section {
+                padding: var(--spacing-xl);
+            }
+        }
+        
+        /* Enhanced form controls using modern CSS Grid and Flexbox */
         .form-group {
+            display: grid;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            
+            /* Mobile-first: single column */
+            grid-template-columns: 1fr;
+        }
+        
+        .form-group.inline {
+            /* Enhanced mobile-first inline forms */
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+            gap: var(--spacing-sm);
         }
         
         @media (min-width: 480px) {
             .form-group.inline {
                 flex-direction: row;
-                align-items: center;
+                align-items: stretch;
+                gap: var(--spacing-md);
             }
             
             .form-group.inline input {
                 flex: 1;
+                min-width: 0; /* Prevent flex item overflow */
+            }
+            
+            .form-group.inline button {
+                flex-shrink: 0;
+                min-width: 100px;
             }
         }
         
+        /* Enhanced form controls with modern CSS features */
         input, button, textarea {
-            padding: 0.75rem;
+            padding: var(--spacing-md);
             border: 2px solid var(--border-color);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
+            border-radius: var(--border-radius-lg);
+            font-size: var(--font-size-base);
             font-family: inherit;
-            transition: var(--transition);
+            transition: var(--transition-fast);
             background: var(--white);
+            
+            /* Enhanced mobile touch targets */
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            
+            /* Modern CSS appearance */
+            appearance: none;
+            -webkit-appearance: none;
         }
         
+        /* Enhanced focus states with modern CSS */
         input:focus, textarea:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            
+            /* Modern focus ring for accessibility */
+            outline: 2px solid transparent;
+            outline-offset: 2px;
         }
         
+        input:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        
+        /* Enhanced button styling with modern CSS features */
         button {
             background: var(--primary-color);
             color: white;
@@ -227,17 +481,35 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            min-height: 44px; /* Touch-friendly minimum */
+            min-height: 44px;
+            
+            /* Modern button enhancements */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            
+            /* Enhanced mobile performance */
+            will-change: transform, background-color;
+            transform: translateZ(0);
         }
         
         button:hover:not(:disabled) {
             background: var(--primary-hover);
             border-color: var(--primary-hover);
             transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
         }
         
         button:active:not(:disabled) {
+            background: var(--primary-active);
             transform: translateY(0);
+            box-shadow: none;
+        }
+        
+        button:focus-visible:not(:disabled) {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
         }
         
         button:disabled {
@@ -245,34 +517,106 @@
             border-color: var(--secondary-color);
             cursor: not-allowed;
             opacity: 0.6;
+            transform: none;
+            box-shadow: none;
         }
         
+        /* Enhanced mobile button interactions */
+        @media (hover: none) and (pointer: coarse) {
+            button:hover:not(:disabled) {
+                transform: none;
+                box-shadow: none;
+            }
+            
+            button:active:not(:disabled) {
+                background: var(--primary-active);
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Enhanced chat log with modern CSS features */
         #chat-log {
             width: 100%;
             min-height: 200px;
-            height: 40vh;
-            max-height: 400px;
+            height: clamp(200px, 40vh, 400px);
+            max-height: 50vh;
             resize: vertical;
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
             background: var(--white);
             border: 2px solid var(--border-color);
-            border-radius: var(--border-radius);
-            padding: 1rem;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-md);
             line-height: 1.5;
-            font-size: 0.9rem;
+            font-size: var(--font-size-sm);
+            
+            /* Enhanced mobile scrolling */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+            
+            /* Modern CSS Grid for better text layout */
+            display: block;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
+        /* Enhanced scrollbar styling for modern browsers */
+        #chat-log::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #chat-log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #chat-log::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        
+        #chat-log::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+        
+        /* Enhanced peer ID display with modern CSS */
         #my-id {
             font-weight: 600;
             color: var(--success-color);
-            padding: 0.75rem;
+            padding: var(--spacing-md);
             background: linear-gradient(135deg, #d4edda, #c3e6cb);
-            border-radius: var(--border-radius);
+            border-radius: var(--border-radius-lg);
             border: 2px solid #b8dacc;
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
             word-break: break-all;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: var(--font-size-sm);
+            
+            /* Modern CSS Grid for better layout */
+            display: grid;
+            place-items: center;
+            min-height: 44px;
+            
+            /* Enhanced mobile selection */
+            user-select: all;
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            
+            /* Modern text rendering */
+            text-rendering: optimizeLegibility;
+        }
+        
+        /* Enhanced responsive adjustments */
+        @media (min-width: 768px) {
+            #chat-log {
+                height: clamp(250px, 45vh, 500px);
+                font-size: var(--font-size-base);
+            }
+            
+            #my-id {
+                font-size: var(--font-size-base);
+            }
         }
         
         .test-results {
@@ -530,120 +874,180 @@
         // ===== MODERN BROWSER DETECTION AND BLOCKING =====
         
         /**
-         * Detects browser version and blocks legacy browsers
-         * Supports Chrome 88+, Firefox 85+, Safari 14+ only
+         * Enhanced browser detection with strict modern browser requirements
+         * Supports Chrome 88+, Firefox 85+, Safari 14+, Edge 88+ only
+         * Uses ES2020+ features for detection and blocking
          */
         const detectAndBlockLegacyBrowsers = () => {
             const userAgent = navigator.userAgent;
             const browserInfo = getBrowserInfo(userAgent);
             
-            if (!browserInfo.isSupported) {
-                showBrowserUpgradeWarning(browserInfo);
+            // Enhanced mobile browser detection
+            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const enhancedBrowserInfo = { ...browserInfo, isMobile };
+            
+            if (!enhancedBrowserInfo.isSupported) {
+                showBrowserUpgradeWarning(enhancedBrowserInfo);
                 return false;
             }
             
-            // Log browser info for deployment analysis
-            console.log('✅ Modern browser detected:', browserInfo);
+            // Additional strict checks for modern features
+            if (!validateStrictModernFeatures()) {
+                showBrowserUpgradeWarning({
+                    ...enhancedBrowserInfo,
+                    isSupported: false,
+                    reason: 'Missing required modern browser features'
+                });
+                return false;
+            }
+            
+            // Log browser info for deployment analysis using modern template literals
+            console.log(`✅ Modern browser detected: ${enhancedBrowserInfo.name} ${enhancedBrowserInfo.version}${isMobile ? ' (Mobile)' : ''}`);
             return true;
         };
         
         /**
-         * Parses user agent to determine browser and version
+         * Enhanced browser detection with strict version requirements
+         * Uses ES2020+ Map and modern array methods for better performance
          * @param {string} userAgent - The navigator.userAgent string
-         * @returns {Object} Browser information with support status
+         * @returns {Object} Enhanced browser information with support status
          */
         const getBrowserInfo = (userAgent) => {
-            // Modern browser detection using regex patterns
-            const browsers = [
-                {
-                    name: 'Chrome',
+            // Enhanced browser detection using Map for better performance
+            const browsers = new Map([
+                ['Chrome', {
                     pattern: /Chrome\/(\d+)/,
                     minVersion: 88,
-                    downloadUrl: 'https://www.google.com/chrome/'
-                },
-                {
-                    name: 'Firefox',
+                    downloadUrl: 'https://www.google.com/chrome/',
+                    releaseDate: 'January 2021'
+                }],
+                ['Firefox', {
                     pattern: /Firefox\/(\d+)/,
                     minVersion: 85,
-                    downloadUrl: 'https://www.mozilla.org/firefox/'
-                },
-                {
-                    name: 'Safari',
+                    downloadUrl: 'https://www.mozilla.org/firefox/',
+                    releaseDate: 'January 2021'
+                }],
+                ['Safari', {
                     pattern: /Version\/(\d+).*Safari/,
                     minVersion: 14,
-                    downloadUrl: 'https://www.apple.com/safari/'
-                },
-                {
-                    name: 'Edge',
+                    downloadUrl: 'https://www.apple.com/safari/',
+                    releaseDate: 'September 2020'
+                }],
+                ['Edge', {
                     pattern: /Edg\/(\d+)/,
                     minVersion: 88,
-                    downloadUrl: 'https://www.microsoft.com/edge'
-                }
-            ];
+                    downloadUrl: 'https://www.microsoft.com/edge',
+                    releaseDate: 'January 2021'
+                }]
+            ]);
             
-            for (const browser of browsers) {
-                const match = userAgent.match(browser.pattern);
+            // Use modern array methods and destructuring
+            for (const [name, config] of browsers) {
+                const match = userAgent.match(config.pattern);
                 if (match) {
                     const version = parseInt(match[1], 10);
+                    const isSupported = version >= config.minVersion;
+                    
                     return {
-                        name: browser.name,
+                        name,
                         version,
-                        minVersion: browser.minVersion,
-                        isSupported: version >= browser.minVersion,
-                        downloadUrl: browser.downloadUrl,
-                        userAgent
+                        minVersion: config.minVersion,
+                        isSupported,
+                        downloadUrl: config.downloadUrl,
+                        releaseDate: config.releaseDate,
+                        userAgent,
+                        // Enhanced mobile detection using optional chaining
+                        isMobile: /Mobile|Android|iPhone|iPad/i.test(userAgent),
+                        // Modern feature detection
+                        supportsES2020: isSupported,
+                        supportsWebRTC: isSupported && window.RTCPeerConnection !== undefined
                     };
                 }
             }
             
-            // Unknown browser - block by default
+            // Enhanced unknown browser handling with better messaging
             return {
                 name: 'Unknown',
                 version: 0,
                 minVersion: 999,
                 isSupported: false,
                 downloadUrl: 'https://www.google.com/chrome/',
-                userAgent
+                releaseDate: 'Unknown',
+                userAgent,
+                isMobile: /Mobile|Android|iPhone|iPad/i.test(userAgent),
+                supportsES2020: false,
+                supportsWebRTC: false,
+                reason: 'Unrecognized browser - modern browser required'
             };
         };
         
         /**
-         * Shows browser upgrade warning with download links
-         * @param {Object} browserInfo - Browser information object
+         * Enhanced browser upgrade warning with mobile-specific guidance
+         * Uses modern template literals and enhanced mobile detection
+         * @param {Object} browserInfo - Enhanced browser information object
          */
         const showBrowserUpgradeWarning = (browserInfo) => {
+            // Enhanced mobile-specific messaging using modern conditional logic
+            const mobileGuidance = browserInfo.isMobile ? `
+                <div class="mobile-warning">
+                    <strong>📱 Mobile Device Detected</strong><br>
+                    Update your browser through your device's app store:
+                    <ul style="margin: 0.5rem 0; padding-left: 1rem;">
+                        <li><strong>iOS:</strong> Update Safari through Settings → General → Software Update</li>
+                        <li><strong>Android:</strong> Update Chrome through Google Play Store</li>
+                    </ul>
+                </div>
+            ` : '';
+            
+            // Enhanced browser links with better mobile support
+            const browserLinks = [
+                { name: 'Chrome', url: 'https://www.google.com/chrome/', icon: '🌐' },
+                { name: 'Firefox', url: 'https://www.mozilla.org/firefox/', icon: '🦊' },
+                { name: 'Edge', url: 'https://www.microsoft.com/edge', icon: '🔷' },
+                ...(browserInfo.isMobile ? [] : [{ name: 'Safari', url: 'https://www.apple.com/safari/', icon: '🧭' }])
+            ];
+            
+            const browserLinksHtml = browserLinks.map(({ name, url, icon }) => 
+                `<a href="${url}" class="browser-link" target="_blank" rel="noopener noreferrer">
+                    ${icon} Download ${name}
+                </a>`
+            ).join('');
+            
+            // Enhanced warning with modern template literals and better UX
             const warningHtml = `
                 <div class="browser-warning">
                     <div class="browser-warning-content">
                         <h2>🚫 Modern Browser Required</h2>
                         <p><strong>Your browser is not supported.</strong></p>
-                        <p>Detected: ${browserInfo.name} ${browserInfo.version || 'Unknown'}</p>
-                        <p>This application requires modern browser features and will not work with legacy browsers.</p>
+                        <p>Detected: ${browserInfo.name} ${browserInfo.version || 'Unknown'}${browserInfo.isMobile ? ' (Mobile)' : ''}</p>
+                        <p>This application requires modern browser features including ES2020+ JavaScript, modern WebRTC APIs, and CSS Grid/Flexbox support.</p>
                         
                         <h3>Minimum Requirements:</h3>
-                        <ul style="text-align: left; display: inline-block;">
-                            <li>Chrome 88+ (Released Jan 2021)</li>
-                            <li>Firefox 85+ (Released Jan 2021)</li>
-                            <li>Safari 14+ (Released Sep 2020)</li>
-                            <li>Edge 88+ (Released Jan 2021)</li>
+                        <ul>
+                            <li><strong>Chrome 88+</strong> (Released January 2021)</li>
+                            <li><strong>Firefox 85+</strong> (Released January 2021)</li>
+                            <li><strong>Safari 14+</strong> (Released September 2020)</li>
+                            <li><strong>Edge 88+</strong> (Released January 2021)</li>
                         </ul>
                         
-                        <p><strong>Why upgrade?</strong> This app uses modern JavaScript (ES2020+), WebRTC, and CSS features that require recent browser versions for security and performance.</p>
+                        <p><strong>Required Features:</strong></p>
+                        <ul>
+                            <li>ES2020+ JavaScript (Optional chaining, Nullish coalescing, BigInt)</li>
+                            <li>Modern WebRTC APIs with HTTPS support</li>
+                            <li>CSS Grid, Flexbox, and Custom Properties</li>
+                            <li>Modern security features and HTTPS enforcement</li>
+                        </ul>
+                        
+                        ${mobileGuidance}
                         
                         <div class="browser-links">
-                            <a href="https://www.google.com/chrome/" class="browser-link" target="_blank">
-                                Download Chrome
-                            </a>
-                            <a href="https://www.mozilla.org/firefox/" class="browser-link" target="_blank">
-                                Download Firefox
-                            </a>
-                            <a href="https://www.microsoft.com/edge" class="browser-link" target="_blank">
-                                Download Edge
-                            </a>
+                            ${browserLinksHtml}
                         </div>
                         
-                        <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
-                            <strong>Mobile users:</strong> Update your browser through your device's app store.
+                        <p style="margin-top: 1.5rem; font-size: 0.875rem; color: #666; line-height: 1.4;">
+                            <strong>Why these requirements?</strong> Modern browsers provide better security, performance, 
+                            and support for the latest web standards. Legacy browsers lack critical features needed 
+                            for peer-to-peer communication and modern web applications.
                         </p>
                     </div>
                 </div>
@@ -651,39 +1055,112 @@
             
             document.body.insertAdjacentHTML('beforeend', warningHtml);
             
-            // Prevent any further script execution
-            throw new Error('Legacy browser blocked');
+            // Enhanced error with more context
+            throw new Error(`Legacy browser blocked: ${browserInfo.name} ${browserInfo.version} (Required: ${browserInfo.minVersion}+)`);
         };
         
         /**
-         * Validates modern JavaScript features are available
-         * Tests ES2020+ features like optional chaining, nullish coalescing
+         * Strict validation of modern browser features required for the application
+         * Tests comprehensive ES2020+ and modern browser API support
+         */
+        const validateStrictModernFeatures = () => {
+            const requiredFeatures = new Map([
+                // ES2020+ JavaScript features
+                ['Optional Chaining', () => {}?.test?.property],
+                ['Nullish Coalescing', () => null ?? 'default'],
+                ['BigInt', () => BigInt(123n)],
+                ['Promise.allSettled', () => Promise.allSettled([Promise.resolve(1)])],
+                ['String.matchAll', () => 'test'.matchAll(/t/g)],
+                ['Dynamic Import', () => typeof import === 'function'],
+                
+                // Modern browser APIs
+                ['Fetch API', () => typeof fetch === 'function'],
+                ['Intersection Observer', () => typeof IntersectionObserver === 'function'],
+                ['ResizeObserver', () => typeof ResizeObserver === 'function'],
+                ['CSS Custom Properties', () => CSS?.supports?.('color', 'var(--test)')],
+                
+                // WebRTC modern features
+                ['RTCPeerConnection', () => typeof RTCPeerConnection === 'function'],
+                ['RTCDataChannel', () => typeof RTCDataChannel === 'function'],
+                
+                // Modern CSS features support
+                ['CSS Grid', () => CSS?.supports?.('display', 'grid')],
+                ['CSS Flexbox', () => CSS?.supports?.('display', 'flex')],
+                ['CSS Backdrop Filter', () => CSS?.supports?.('backdrop-filter', 'blur(1px)')],
+            ]);
+            
+            const failedFeatures = [];
+            
+            for (const [featureName, testFunction] of requiredFeatures) {
+                try {
+                    const result = testFunction();
+                    if (result === false || result === undefined) {
+                        failedFeatures.push(featureName);
+                    }
+                } catch (error) {
+                    failedFeatures.push(featureName);
+                }
+            }
+            
+            if (failedFeatures.length > 0) {
+                console.error('❌ Missing required modern features:', failedFeatures);
+                return false;
+            }
+            
+            console.log('✅ All strict modern browser features validated');
+            return true;
+        };
+        
+        /**
+         * Enhanced modern JavaScript feature validation with comprehensive testing
+         * Tests ES2020+ features with better error reporting
          */
         const validateModernJSFeatures = () => {
             try {
-                // Test optional chaining
-                const test1 = {}?.nonexistent?.property;
+                // Enhanced ES2020+ feature testing with actual usage
+                const testObject = { nested: { value: 42 } };
                 
-                // Test nullish coalescing
+                // Test optional chaining with actual property access
+                const test1 = testObject?.nested?.value ?? 0;
+                if (test1 !== 42) throw new Error('Optional chaining failed');
+                
+                // Test nullish coalescing with various falsy values
                 const test2 = null ?? 'default';
+                const test3 = undefined ?? 'default';
+                const test4 = 0 ?? 'should be 0'; // Should not use default
+                if (test2 !== 'default' || test3 !== 'default' || test4 !== 0) {
+                    throw new Error('Nullish coalescing failed');
+                }
                 
-                // Test BigInt
-                const test3 = BigInt(123);
+                // Test BigInt with operations
+                const test5 = BigInt(123);
+                const test6 = test5 + 1n;
+                if (test6 !== 124n) throw new Error('BigInt operations failed');
                 
-                // Test Promise.allSettled (ES2020)
-                const test4 = Promise.allSettled([Promise.resolve(1)]);
+                // Test Promise.allSettled with actual promises
+                const test7 = Promise.allSettled([
+                    Promise.resolve('success'),
+                    Promise.reject('error')
+                ]);
+                if (!(test7 instanceof Promise)) throw new Error('Promise.allSettled failed');
                 
-                // Test String.matchAll (ES2020)
-                const test5 = 'test'.matchAll(/t/g);
+                // Test String.matchAll with actual regex
+                const test8 = Array.from('test test'.matchAll(/test/g));
+                if (test8.length !== 2) throw new Error('String.matchAll failed');
                 
-                console.log('✅ Modern JavaScript features validated');
+                // Test modern array methods
+                const test9 = [1, 2, 3].flatMap(x => [x, x * 2]);
+                if (test9.length !== 6) throw new Error('Array.flatMap failed');
+                
+                console.log('✅ Enhanced modern JavaScript features validated');
                 return true;
             } catch (error) {
                 console.error('❌ Modern JavaScript features not supported:', error);
                 showBrowserUpgradeWarning({
                     name: 'Legacy',
                     version: 'Unknown',
-                    isSupported: false
+                    isSupported: false,
+                    reason: `Missing ES2020+ feature: ${error.message}`
                 });
                 return false;
             }
@@ -4363,21 +4840,42 @@
             validateHTTPSResources();
             
             try {
-                // Modern configuration using destructuring and spread operator
+                // Enhanced modern configuration using ES2020+ features and Safari 14+ optimizations
                 const peerConfig = {
                     config: {
                         iceServers: [
                             { urls: CONFIG.STUN_SERVER }
                         ],
-                        // Modern WebRTC configuration for Safari 14+ and Chrome 88+
+                        // Safari 14+ modern WebRTC optimizations
                         iceCandidatePoolSize: 10,
                         bundlePolicy: 'max-bundle',
                         rtcpMuxPolicy: 'require',
-                        // Use modern DTLS for better security
-                        iceTransportPolicy: 'all'
+                        iceTransportPolicy: 'all',
+                        
+                        // Enhanced modern WebRTC configuration for better mobile performance
+                        ...(browserInfo?.name === 'Safari' && {
+                            // Safari 14+ specific optimizations
+                            sdpSemantics: 'unified-plan',
+                            enableDtlsSrtp: true,
+                        }),
+                        
+                        // Chrome 88+ and Firefox 85+ optimizations
+                        ...(browserInfo?.name === 'Chrome' && {
+                            enableDscp: true,
+                            enableIPv6: true,
+                        }),
+                        
+                        // Modern security enhancements
+                        certificates: undefined, // Use browser-generated certificates
+                        peerIdentity: undefined, // No peer identity required for this app
                     },
-                    // Modern debugging configuration
-                    debug: window.location.hostname === 'localhost' ? 2 : 0
+                    
+                    // Enhanced debugging with modern conditional logic
+                    debug: window.location.hostname === 'localhost' ? 2 : 0,
+                    
+                    // Modern PeerJS configuration
+                    serialization: 'json', // Use JSON serialization for better performance
+                    reliable: true, // Enable reliable data channels
                 };
                 
                 // Create PeerJS instance with modern error handling
@@ -4471,10 +4969,17 @@
                 document.getElementById(elementId).addEventListener(event, handler);
             });
             
-            // Network connectivity monitoring with arrow functions
+            // Enhanced network connectivity monitoring with modern mobile features
             window.addEventListener('online', () => {
                 addSystemMessage('🌐 Network connectivity restored');
                 updateConnectionStatus('disconnected', 'Network Online');
+                
+                // Modern network information API for mobile optimization
+                if ('connection' in navigator) {
+                    const connection = navigator.connection;
+                    const networkInfo = `${connection.effectiveType ?? 'unknown'} (${connection.downlink ?? 'unknown'}Mbps)`;
+                    addSystemMessage(`📶 Network: ${networkInfo}`);
+                }
             });
             
             window.addEventListener('offline', () => {
@@ -4483,6 +4988,34 @@
                 
                 if (connection?.open) {
                     addSystemMessage('⚠️ Active connection may be affected');
+                }
+            });
+            
+            // Modern mobile network change detection
+            if ('connection' in navigator && 'addEventListener' in navigator.connection) {
+                navigator.connection.addEventListener('change', () => {
+                    const conn = navigator.connection;
+                    const networkType = conn.effectiveType ?? 'unknown';
+                    const downlink = conn.downlink ?? 0;
+                    
+                    addSystemMessage(`📶 Network changed: ${networkType} (${downlink}Mbps)`);
+                    
+                    // Warn about slow connections that might affect WebRTC
+                    if (downlink < 0.5) {
+                        addSystemMessage('⚠️ Slow network detected - connection quality may be affected');
+                    }
+                });
+            }
+            
+            // Modern visibility API for mobile app lifecycle
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    console.log('App backgrounded - maintaining connection');
+                } else {
+                    console.log('App foregrounded - checking connection status');
+                    if (connection?.open) {
+                        addSystemMessage('🔄 App resumed - connection still active');
+                    }
                 }
             });
         };
@@ -4543,8 +5076,27 @@
             }, 1000);
         };
         
-        // Initialize application when DOM is ready using modern patterns
+        // Enhanced application initialization with modern performance monitoring
         const initializeWhenReady = () => {
+            // Modern performance monitoring using Performance Observer API
+            if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((list) => {
+                    for (const entry of list.getEntries()) {
+                        if (entry.entryType === 'navigation') {
+                            console.log(`📊 Page load: ${Math.round(entry.loadEventEnd - entry.fetchStart)}ms`);
+                        } else if (entry.entryType === 'largest-contentful-paint') {
+                            console.log(`🎨 LCP: ${Math.round(entry.startTime)}ms`);
+                        }
+                    }
+                });
+                
+                try {
+                    observer.observe({ entryTypes: ['navigation', 'largest-contentful-paint'] });
+                } catch (e) {
+                    console.log('Performance Observer not fully supported');
+                }
+            }
+            
             // Record page load completion time
             recordPageLoadTime();
             
@@ -4559,13 +5111,64 @@
             initializeWhenReady();
         }
         
-        // Additional performance optimization: record when all resources are loaded
+        // Enhanced performance optimization with modern mobile features
         window.addEventListener('load', () => {
-            // Log final performance metrics after all resources are loaded
+            // Modern performance metrics logging
             setTimeout(() => {
                 logPerformanceMetrics();
+                
+                // Modern mobile-specific optimizations
+                if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+                    console.log('🔧 Service Worker support available for future caching');
+                }
+                
+                // Modern battery API for mobile optimization (if available)
+                if ('getBattery' in navigator) {
+                    navigator.getBattery().then(battery => {
+                        if (battery.level < 0.2) {
+                            addSystemMessage('🔋 Low battery detected - consider power saving mode');
+                        }
+                    }).catch(() => {
+                        // Battery API not available or blocked
+                    });
+                }
+                
+                // Modern device memory API for performance optimization
+                if ('deviceMemory' in navigator) {
+                    const memory = navigator.deviceMemory;
+                    if (memory < 4) {
+                        console.log(`📱 Low memory device detected: ${memory}GB`);
+                        addSystemMessage('📱 Optimizing for low-memory device');
+                    }
+                }
             }, 1000);
         });
+        
+        // Modern mobile-specific touch optimizations
+        if ('ontouchstart' in window) {
+            // Prevent double-tap zoom on buttons
+            document.addEventListener('touchstart', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    e.preventDefault();
+                    e.target.click();
+                }
+            }, { passive: false });
+            
+            // Modern touch feedback
+            document.addEventListener('touchstart', (e) => {
+                if (e.target.matches('button, input, .browser-link')) {
+                    e.target.style.transform = 'scale(0.98)';
+                }
+            });
+            
+            document.addEventListener('touchend', (e) => {
+                if (e.target.matches('button, input, .browser-link')) {
+                    setTimeout(() => {
+                        e.target.style.transform = '';
+                    }, 150);
+                }
+            });
+        }
         
     </script>
 </body>
