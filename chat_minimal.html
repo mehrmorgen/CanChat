@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC PeerJS Chat - Minimal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .connecting { background: #fff3cd; color: #856404; }
+        input, button { padding: 8px; margin: 5px; }
+        #chat-log { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; }
+        #test-output { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC PeerJS Chat - Minimal</h1>
+        
+        <div id="status" class="status disconnected">Initializing...</div>
+        
+        <div>
+            <h3>Your Peer ID</h3>
+            <div id="my-id">Connecting...</div>
+        </div>
+        
+        <div>
+            <h3>Connect to Peer</h3>
+            <input type="text" id="peer-id-input" placeholder="Enter peer ID">
+            <button id="connect-btn">Connect</button>
+        </div>
+        
+        <div>
+            <h3>Chat</h3>
+            <div id="chat-log"></div>
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <button id="send-btn">Send</button>
+        </div>
+        
+        <div>
+            <h3>Test Results</h3>
+            <div id="test-output">Running tests...</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    <script>
+        // Simple test output
+        const testOutput = document.getElementById('test-output');
+        const status = document.getElementById('status');
+        const myIdElement = document.getElementById('my-id');
+        const chatLog = document.getElementById('chat-log');
+        
+        function addTestResult(message, success = true) {
+            const color = success ? 'green' : 'red';
+            const icon = success ? '✅' : '❌';
+            testOutput.innerHTML += `<div style="color: ${color}">${icon} ${message}</div>`;
+        }
+        
+        function addMessage(message, type = 'system') {
+            const timestamp = new Date().toLocaleTimeString();
+            chatLog.innerHTML += `<div><strong>[${timestamp}] ${type}:</strong> ${message}</div>`;
+            chatLog.scrollTop = chatLog.scrollTop;
+        }
+        
+        // Test basic JavaScript features
+        try {
+            addTestResult('JavaScript execution working');
+            
+            // Test modern features
+            const test = null ?? 'default';
+            addTestResult('Nullish coalescing supported');
+            
+            const test2 = {}?.test?.property;
+            addTestResult('Optional chaining supported');
+            
+        } catch (error) {
+            addTestResult(`JavaScript error: ${error.message}`, false);
+        }
+        
+        // Test PeerJS loading
+        if (typeof Peer !== 'undefined') {
+            addTestResult('PeerJS library loaded');
+            
+            try {
+                // Initialize peer
+                const peer = new Peer();
+                
+                peer.on('open', (id) => {
+                    myIdElement.textContent = id;
+                    status.textContent = 'Connected - Ready to chat';
+                    status.className = 'status connected';
+                    addTestResult(`Peer initialized with ID: ${id}`);
+                    addMessage(`Your peer ID: ${id}`);
+                });
+                
+                peer.on('error', (error) => {
+                    addTestResult(`Peer error: ${error.message}`, false);
+                    addMessage(`Error: ${error.message}`, 'error');
+                    status.textContent = 'Connection error';
+                    status.className = 'status disconnected';
+                });
+                
+                // Connection handling
+                let connection = null;
+                
+                document.getElementById('connect-btn').addEventListener('click', () => {
+                    const peerId = document.getElementById('peer-id-input').value.trim();
+                    if (peerId) {
+                        status.textContent = 'Connecting...';
+                        status.className = 'status connecting';
+                        connection = peer.connect(peerId);
+                        
+                        connection.on('open', () => {
+                            addMessage(`Connected to ${peerId}`, 'system');
+                            status.textContent = 'Connected to peer';
+                            status.className = 'status connected';
+                        });
+                        
+                        connection.on('data', (data) => {
+                            addMessage(data, 'peer');
+                        });
+                        
+                        connection.on('error', (error) => {
+                            addMessage(`Connection error: ${error.message}`, 'error');
+                        });
+                    }
+                });
+                
+                // Incoming connections
+                peer.on('connection', (conn) => {
+                    connection = conn;
+                    addMessage(`Incoming connection from ${conn.peer}`, 'system');
+                    
+                    conn.on('data', (data) => {
+                        addMessage(data, 'peer');
+                    });
+                });
+                
+                // Send message
+                document.getElementById('send-btn').addEventListener('click', () => {
+                    const message = document.getElementById('message-input').value.trim();
+                    if (message && connection && connection.open) {
+                        connection.send(message);
+                        addMessage(message, 'you');
+                        document.getElementById('message-input').value = '';
+                    }
+                });
+                
+                // Enter key to send
+                document.getElementById('message-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('send-btn').click();
+                    }
+                });
+                
+            } catch (error) {
+                addTestResult(`Peer initialization error: ${error.message}`, false);
+            }
+            
+        } else {
+            addTestResult('PeerJS library not loaded', false);
+        }
+        
+        addTestResult('Initialization complete');
+    </script>
+</body>
+</html>

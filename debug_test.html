@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        try {
+            // Test optional chaining
+            const test = {}?.test?.property;
+            output.innerHTML += '<p>✅ Optional chaining works</p>';
+            
+            // Test nullish coalescing
+            const test2 = null ?? 'default';
+            output.innerHTML += '<p>✅ Nullish coalescing works</p>';
+            
+            // Test if PeerJS would load
+            output.innerHTML += '<p>Testing PeerJS loading...</p>';
+            
+        } catch (error) {
+            output.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            console.error('Error:', error);
+        }
+    </script>
+    
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js"></script>
+    <script>
+        setTimeout(() => {
+            try {
+                if (typeof Peer !== 'undefined') {
+                    output.innerHTML += '<p>✅ PeerJS loaded successfully</p>';
+                } else {
+                    output.innerHTML += '<p>❌ PeerJS not loaded</p>';
+                }
+            } catch (error) {
+                output.innerHTML += `<p>❌ PeerJS Error: ${error.message}</p>`;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
