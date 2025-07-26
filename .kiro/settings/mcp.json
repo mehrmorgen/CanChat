@@ -15,7 +15,9 @@
         "git_status",
         "git_log",
         "git_diff",
-        "git_show"
+        "git_show",
+        "git_commit",
+        "git_add"
       ]
     }
   }

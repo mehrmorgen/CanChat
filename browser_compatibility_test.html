@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Compatibility Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .feature {
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .feature.supported {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .feature.unsupported {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Browser Compatibility Test</h1>
+        <p>This page tests browser compatibility for the WebRTC PeerJS Chat application.</p>
+        
+        <div id="browser-info" class="status">
+            <h3>Browser Information</h3>
+            <div id="browser-details">Loading...</div>
+        </div>
+        
+        <div id="feature-support" class="status">
+            <h3>ES2020+ Feature Support</h3>
+            <div id="feature-details" class="feature-list">Loading...</div>
+        </div>
+        
+        <div id="compatibility-result" class="status">
+            <h3>Compatibility Result</h3>
+            <div id="result-details">Testing...</div>
+        </div>
+        
+        <div>
+            <h3>Actions</h3>
+            <button onclick="runCompatibilityTest()">🔄 Re-run Test</button>
+            <button onclick="testLegacyBrowserWarning()">⚠️ Test Legacy Browser Warning</button>
+            <button onclick="window.open('https://mehrmorgen.github.io/CanChat/chat.html', '_blank')">🚀 Open WebRTC Chat</button>
+        </div>
+        
+        <div id="test-log">
+            <h3>Test Log</h3>
+            <pre id="log-content"></pre>
+        </div>
+    </div>
+
+    <!-- Load the compatibility detector -->
+    <script src="syntax_compatibility_detector.js"></script>
+    
+    <script>
+        // Test logging
+        let logContent = '';
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log-content').textContent = logContent;
+        }
+        
+        // Display browser information
+        function displayBrowserInfo() {
+            const browserInfo = window.syntaxCompatibilityDetector.getBrowserInfo();
+            const detailsDiv = document.getElementById('browser-details');
+            const statusDiv = document.getElementById('browser-info');
+            
+            const statusClass = browserInfo.isSupported ? 'success' : 'error';
+            statusDiv.className = `status ${statusClass}`;
+            
+            detailsDiv.innerHTML = `
+                <strong>Browser:</strong> ${browserInfo.name} ${browserInfo.version}<br>
+                <strong>Required:</strong> ${browserInfo.name} ${browserInfo.minVersion}+ (${browserInfo.releaseDate})<br>
+                <strong>Status:</strong> ${browserInfo.isSupported ? '✅ Supported' : '❌ Not Supported'}<br>
+                <strong>Download:</strong> <a href="${browserInfo.downloadUrl}" target="_blank">${browserInfo.downloadUrl}</a>
+            `;
+            
+            log(`Browser: ${browserInfo.name} ${browserInfo.version} (${browserInfo.isSupported ? 'Supported' : 'Not Supported'})`);
+        }
+        
+        // Display feature support
+        function displayFeatureSupport() {
+            const features = window.syntaxCompatibilityDetector.testModernFeatures();
+            const detailsDiv = document.getElementById('feature-details');
+            const statusDiv = document.getElementById('feature-support');
+            
+            const featureList = [
+                { name: 'Optional Chaining (obj?.prop)', key: 'optionalChaining' },
+                { name: 'Nullish Coalescing (null ?? default)', key: 'nullishCoalescing' },
+                { name: 'BigInt Support', key: 'bigInt' },
+                { name: 'Promise.allSettled', key: 'promiseAllSettled' },
+                { name: 'String.matchAll', key: 'stringMatchAll' }
+            ];
+            
+            const supportedCount = featureList.filter(f => features[f.key]).length;
+            const statusClass = supportedCount === featureList.length ? 'success' : 
+                               supportedCount > 2 ? 'warning' : 'error';
+            statusDiv.className = `status ${statusClass}`;
+            
+            detailsDiv.innerHTML = featureList.map(feature => {
+                const supported = features[feature.key];
+                const statusClass = supported ? 'supported' : 'unsupported';
+                const icon = supported ? '✅' : '❌';
+                return `<div class="feature ${statusClass}">${icon} ${feature.name}</div>`;
+            }).join('');
+            
+            log(`Features: ${supportedCount}/${featureList.length} supported`);
+        }
+        
+        // Display compatibility result
+        function displayCompatibilityResult() {
+            const isCompatible = window.syntaxCompatibilityDetector.checkCompatibility();
+            const resultDiv = document.getElementById('result-details');
+            const statusDiv = document.getElementById('compatibility-result');
+            
+            const statusClass = isCompatible ? 'success' : 'error';
+            statusDiv.className = `status ${statusClass}`;
+            
+            if (isCompatible) {
+                resultDiv.innerHTML = `
+                    <strong>✅ Compatible!</strong><br>
+                    Your browser supports all required features for the WebRTC PeerJS Chat application.
+                    You can safely use the application without any issues.
+                `;
+                log('✅ Compatibility check PASSED');
+            } else {
+                resultDiv.innerHTML = `
+                    <strong>❌ Not Compatible</strong><br>
+                    Your browser does not support the required modern JavaScript features.
+                    Please upgrade to a modern browser to use the WebRTC PeerJS Chat application.
+                `;
+                log('❌ Compatibility check FAILED');
+            }
+        }
+        
+        // Run full compatibility test
+        function runCompatibilityTest() {
+            log('🔄 Running compatibility test...');
+            displayBrowserInfo();
+            displayFeatureSupport();
+            displayCompatibilityResult();
+            log('✅ Compatibility test completed');
+        }
+        
+        // Test legacy browser warning (simulates legacy browser)
+        function testLegacyBrowserWarning() {
+            log('⚠️ Testing legacy browser warning...');
+            
+            // Temporarily override the compatibility detector to simulate legacy browser
+            const originalGetBrowserInfo = window.syntaxCompatibilityDetector.getBrowserInfo;
+            const originalTestModernFeatures = window.syntaxCompatibilityDetector.testModernFeatures;
+            
+            window.syntaxCompatibilityDetector.getBrowserInfo = function() {
+                return {
+                    name: 'Internet Explorer',
+                    version: 11,
+                    minVersion: 88,
+                    isSupported: false,
+                    downloadUrl: 'https://www.google.com/chrome/',
+                    releaseDate: 'January 2021'
+                };
+            };
+            
+            window.syntaxCompatibilityDetector.testModernFeatures = function() {
+                return {
+                    optionalChaining: false,
+                    nullishCoalescing: false,
+                    bigInt: false,
+                    promiseAllSettled: false,
+                    stringMatchAll: false
+                };
+            };
+            
+            // Trigger the warning
+            try {
+                window.syntaxCompatibilityDetector.checkCompatibility();
+            } catch (e) {
+                log('Legacy browser warning displayed');
+            }
+            
+            // Restore original functions
+            window.syntaxCompatibilityDetector.getBrowserInfo = originalGetBrowserInfo;
+            window.syntaxCompatibilityDetector.testModernFeatures = originalTestModernFeatures;
+            
+            // Remove the warning after 5 seconds
+            setTimeout(() => {
+                const warning = document.querySelector('[style*="position: fixed"]');
+                if (warning) {
+                    warning.remove();
+                    log('Legacy browser warning removed');
+                }
+            }, 5000);
+        }
+        
+        // Run initial test when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Browser compatibility test page loaded');
+            runCompatibilityTest();
+        });
+    </script>
+</body>
+</html>
