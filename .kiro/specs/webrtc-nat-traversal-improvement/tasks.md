@@ -8,12 +8,12 @@
   - Commit
   - _Requirements: 1.2, 2.2, 4.1_
 
-- [-] 2. Implement network detection capabilities
+- [x] 2. Implement network detection capabilities
   - Create NetworkDetector class to identify connection types (WiFi vs cellular)
   - Add STUN server connectivity testing functionality
   - Implement latency measurement for optimal server selection
   - Write tests for network detection accuracy and server connectivity
-  - Commit
+  - Commit to git
   - _Requirements: 1.1, 2.1, 4.1_
 
 - [ ] 3. Build connection manager with retry logic
@@ -21,7 +21,7 @@
   - Add progressive fallback through different ICE server tiers
   - Create connection timeout handling with appropriate timeouts per tier
   - Write integration tests for connection establishment and retry scenarios
-  - Commit
+  - Commit to git
   - _Requirements: 1.2, 2.1, 4.2_
 
 - [ ] 4. Create comprehensive diagnostics engine
@@ -29,7 +29,7 @@
   - Add ICE candidate logging and analysis functionality
   - Create diagnostic report generation with user-friendly error messages
   - Write tests for diagnostic accuracy and troubleshooting suggestions
-  - Commit
+  - Commit to git
   - _Requirements: 3.1, 3.2, 3.4_
 
 - [ ] 5. Implement TURN relay fallback system
