@@ -955,6 +955,174 @@
         .step-action:hover {
             color: #0056b3;
         }
+        
+        /* Enhanced Error Classification Styles */
+        .error-classification {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .error-classification h4 {
+            margin: 0 0 8px 0;
+            color: #856404;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .error-classification h4::before {
+            content: '⚠️';
+            font-size: 16px;
+        }
+        
+        .classification-item {
+            margin: 4px 0;
+            font-size: 12px;
+            color: #856404;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .classification-confidence {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        
+        .confidence-high {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .confidence-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .confidence-low {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Fallback Suggestions Styles */
+        .fallback-suggestions {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .fallback-suggestions h4 {
+            margin: 0 0 10px 0;
+            color: #0c5460;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .fallback-suggestions h4::before {
+            content: '🔄';
+            font-size: 16px;
+        }
+        
+        .fallback-item {
+            margin: 6px 0;
+            padding: 6px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #0c5460;
+        }
+        
+        /* TURN Server Information Styles */
+        .turn-server-info {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            border-left: 4px solid #6c757d;
+        }
+        
+        .turn-server-info h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .turn-server-info h4::before {
+            content: '🔄';
+            font-size: 16px;
+        }
+        
+        .turn-service {
+            margin: 4px 0;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #495057;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        
+        .turn-service.premium {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* Network Environment Indicators */
+        .network-environment {
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-size: 11px;
+        }
+        
+        .network-indicator {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .network-corporate {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .network-mobile {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .network-secure {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .network-firewall {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -2914,6 +3082,216 @@
             });
         });
         
+        describe('Comprehensive Error Handling and User Guidance Tests', () => {
+            test('should classify NAT/firewall errors correctly', () => {
+                expect(typeof classifyPeerError).toBe('function');
+                expect(typeof classifyErrorForGuidance).toBe('function');
+                
+                // Test NAT traversal error classification
+                const natError = { type: 'ice-connection-failed', message: 'ICE connection failed' };
+                const classified = classifyPeerError(natError);
+                expect(classified.type).toBe('nat-traversal-failed');
+                expect(classified.context).toBe('nat');
+                expect(classified.classified).toBe(true);
+                
+                // Test symmetric NAT error classification
+                const symmetricError = { type: 'network', message: 'symmetric NAT detected' };
+                const symmetricClassified = classifyPeerError(symmetricError);
+                expect(symmetricClassified.type).toBe('symmetric-nat');
+                expect(symmetricClassified.context).toBe('symmetric-nat');
+            });
+            
+            test('should provide specific guidance for different NAT scenarios', () => {
+                expect(typeof showPeerErrorGuidance).toBe('function');
+                
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                // Test firewall-blocked guidance
+                const firewallError = { type: 'firewall-blocked', context: 'firewall' };
+                showPeerErrorGuidance(firewallError);
+                expect(chatLog.value).toContain('Firewall is blocking WebRTC connections');
+                expect(chatLog.value).toContain('Temporarily disable firewall to test connection');
+                
+                // Test corporate network guidance
+                const corporateError = { type: 'corporate-network', context: 'corporate' };
+                showPeerErrorGuidance(corporateError);
+                expect(chatLog.value).toContain('Corporate network restrictions detected');
+                expect(chatLog.value).toContain('Try using mobile hotspot or personal network');
+            });
+            
+            test('should detect network environment correctly', () => {
+                expect(typeof detectCorporateNetwork).toBe('function');
+                expect(typeof detectMobileNetwork).toBe('function');
+                expect(typeof detectFirewallPresence).toBe('function');
+                
+                // Test network detection functions return boolean values
+                expect(typeof detectCorporateNetwork()).toBe('boolean');
+                expect(typeof detectMobileNetwork()).toBe('boolean');
+                expect(typeof detectFirewallPresence()).toBe('boolean');
+            });
+            
+            test('should show fallback suggestions when all methods fail', () => {
+                expect(typeof showFallbackSuggestions).toBe('function');
+                expect(typeof shouldShowFallbackSuggestions).toBe('function');
+                
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                // Test fallback suggestions for ICE connection failure
+                showFallbackSuggestions('ice-connection-failed');
+                expect(chatLog.value).toContain('Alternative Communication Methods:');
+                expect(chatLog.value).toContain('Try connecting from a different network');
+                expect(chatLog.value).toContain('Network-specific alternatives:');
+                expect(chatLog.value).toContain('Both users try connecting from mobile networks');
+                
+                // Test should show fallback logic
+                const iceError = { type: 'ice-connection-failed' };
+                const analysis = { retryCount: 1 };
+                expect(shouldShowFallbackSuggestions(iceError, analysis)).toBe(true);
+                
+                const highRetryAnalysis = { retryCount: 4 };
+                expect(shouldShowFallbackSuggestions({ type: 'network' }, highRetryAnalysis)).toBe(true);
+            });
+            
+            test('should show TURN server information for NAT issues', () => {
+                expect(typeof showTurnServerInformation).toBe('function');
+                expect(typeof shouldShowTurnServerInfo).toBe('function');
+                
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                // Test TURN server information display
+                showTurnServerInformation();
+                expect(chatLog.value).toContain('TURN Relay Information:');
+                expect(chatLog.value).toContain('Free TURN servers have limited capacity');
+                expect(chatLog.value).toContain('Twilio STUN/TURN Service');
+                expect(chatLog.value).toContain('Xirsys Global TURN Network');
+                expect(chatLog.value).toContain('AWS TURN Servers');
+                expect(chatLog.value).toContain('set up your own TURN server using coturn');
+                
+                // Test should show TURN info logic
+                const iceError = { type: 'ice-connection-failed' };
+                expect(shouldShowTurnServerInfo(iceError, {})).toBe(true);
+                
+                const networkError = { type: 'network' };
+                expect(shouldShowTurnServerInfo(networkError, {})).toBe(true);
+                
+                const turnError = { type: 'turn-unavailable' };
+                expect(shouldShowTurnServerInfo(turnError, {})).toBe(true);
+            });
+            
+            test('should provide comprehensive error configurations', () => {
+                expect(typeof getComprehensiveErrorConfig).toBe('function');
+                
+                // Test NAT traversal error configuration
+                const natError = { type: 'ice-connection-failed' };
+                const analysis = { networkType: 'wifi', retryCount: 2 };
+                const config = getComprehensiveErrorConfig(natError, analysis);
+                
+                expect(config.status).toBe('NAT traversal failed');
+                expect(config.message).toContain('Unable to establish direct connection (NAT/Firewall)');
+                expect(config.diagnostics).toBeDefined();
+                expect(config.troubleshooting).toBeDefined();
+                expect(config.troubleshooting.length).toBeGreaterThan(0);
+                
+                // Verify troubleshooting steps have required properties
+                config.troubleshooting.forEach(step => {
+                    expect(step.icon).toBeDefined();
+                    expect(step.title).toBeDefined();
+                    expect(step.description).toBeDefined();
+                    expect(step.action).toBeDefined();
+                });
+                
+                // Test TURN unavailable error configuration
+                const turnError = { type: 'turn-unavailable' };
+                const turnConfig = getComprehensiveErrorConfig(turnError, analysis);
+                expect(turnConfig.status).toBe('TURN servers unavailable');
+                expect(turnConfig.message).toContain('TURN relay servers unavailable');
+                expect(turnConfig.troubleshooting.some(step => step.title.includes('Premium TURN'))).toBe(true);
+            });
+            
+            test('should handle enhanced connection error with comprehensive guidance', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Mock DiagnosticsEngine and related objects
+                window.diagnosticsEngine = {
+                    analyzeConnectionFailure: () => ({ networkType: 'wifi', retryCount: 2 }),
+                    generateDiagnosticReport: () => ({ summary: 'Connection failed due to NAT' })
+                };
+                
+                // Test comprehensive error handling
+                const natError = { type: 'ice-connection-failed', message: 'ICE connection failed' };
+                handleConnectionError(natError);
+                
+                expect(chatLog.value).toContain('Unable to establish direct connection (NAT/Firewall)');
+                
+                // Verify troubleshooting steps are shown
+                const troubleshootingContainer = document.getElementById('troubleshooting-steps');
+                expect(troubleshootingContainer).not.toBeNull();
+                expect(troubleshootingContainer.style.display).toBe('block');
+                
+                // Test that TURN information is shown for NAT issues
+                expect(chatLog.value).toContain('TURN Relay Information:');
+                expect(chatLog.value).toContain('Alternative Communication Methods:');
+            });
+            
+            test('should create and manage troubleshooting UI elements', () => {
+                expect(typeof createTroubleshootingContainer).toBe('function');
+                expect(typeof showTroubleshootingSteps).toBe('function');
+                expect(typeof hideTroubleshootingSteps).toBe('function');
+                
+                // Test troubleshooting container creation
+                createTroubleshootingContainer();
+                const container = document.getElementById('troubleshooting-steps');
+                expect(container).not.toBeNull();
+                expect(container.classList.contains('troubleshooting-steps')).toBe(true);
+                
+                // Test showing troubleshooting steps
+                const testSteps = [
+                    {
+                        icon: '🔧',
+                        title: 'Test Step',
+                        description: 'Test description',
+                        action: 'Test action'
+                    }
+                ];
+                
+                showTroubleshootingSteps(testSteps);
+                expect(container.style.display).toBe('block');
+                
+                const stepContent = container.querySelector('.troubleshooting-step');
+                expect(stepContent).not.toBeNull();
+                expect(stepContent.textContent).toContain('Test Step');
+                expect(stepContent.textContent).toContain('Test description');
+                expect(stepContent.textContent).toContain('Test action');
+                
+                // Test hiding troubleshooting steps
+                hideTroubleshootingSteps();
+                expect(container.style.display).toBe('none');
+            });
+            
+            test('should provide accurate error classification for guidance', () => {
+                // Test corporate network classification
+                const corporateError = { type: 'network', message: 'corporate firewall blocking' };
+                const corporateClassification = classifyErrorForGuidance(corporateError);
+                expect(corporateClassification.guidance).toBe('corporate-network-bypass');
+                
+                // Test symmetric NAT classification
+                const symmetricError = { type: 'ice-connection-failed', message: 'symmetric NAT detected' };
+                const symmetricClassification = classifyErrorForGuidance(symmetricError);
+                expect(symmetricClassification.classification).toBe('symmetric-nat');
+                expect(symmetricClassification.guidance).toBe('turn-relay-required');
+                
+                // Test unknown error classification
+                const unknownError = { type: 'unknown-error', message: 'mysterious error' };
+                const unknownClassification = classifyErrorForGuidance(unknownError);
+                expect(unknownClassification.classification).toBe('unknown');
+                expect(unknownClassification.guidance).toBe('general-troubleshooting');
+            });
+        });
+
         describe('ConnectionManager Error Handling Tests', () => {
             test('should handle peer initialization errors', () => {
                 const manager = new ConnectionManager(iceServerPool, networkDetector);
@@ -8793,7 +9171,7 @@
         // ===== ERROR HANDLING FUNCTIONS =====
         
         /**
-         * Handles connection errors with user-friendly messages and network diagnostics
+         * Comprehensive error handler for different NAT/firewall scenarios with user guidance
          * @param {Object} error - The error object containing type and message
          */
         const handleConnectionError = (error) => {
@@ -8820,82 +9198,361 @@
             console.log('Connection failure analysis:', analysis);
             console.log('Diagnostic report:', diagnosticReport);
             
-            const errorConfig = new Map([
-                ['peer-unavailable', {
-                    message: '🔍 Connection failed: Peer not found or unavailable',
-                    diagnostics: [
-                        { type: 'error', message: 'Target peer ID may be incorrect or offline' },
-                        { type: 'warning', message: 'Verify the peer ID is exactly as provided' },
-                        { type: 'warning', message: 'Ensure the other user is online and ready' }
-                    ]
-                }],
-                ['network', {
-                    message: '🌐 Connection failed: Network connectivity issue',
-                    diagnostics: [
-                        { type: 'error', message: 'Network connection interrupted or blocked' },
-                        { type: 'warning', message: 'Check your internet connection' },
-                        { type: 'warning', message: 'Firewall may be blocking WebRTC traffic' },
-                        { type: 'warning', message: 'Corporate networks often restrict P2P connections' }
-                    ]
-                }],
-                ['ice-connection-failed', {
-                    message: '🧊 Connection failed: NAT traversal failed',
-                    diagnostics: [
-                        { type: 'error', message: 'Unable to establish direct peer connection' },
-                        { type: 'warning', message: 'Both peers may be behind restrictive NATs/firewalls' },
-                        { type: 'warning', message: 'STUN server may be unreachable' },
-                        { type: 'warning', message: 'Try connecting from different networks' }
-                    ]
-                }],
-                ['ice-connection-disconnected', {
-                    message: '❄️ Connection lost: Network path changed',
-                    diagnostics: [
-                        { type: 'warning', message: 'Network route between peers changed' },
-                        { type: 'warning', message: 'One peer may have switched networks' },
-                        { type: 'warning', message: 'Connection will attempt to reconnect automatically' }
-                    ]
-                }],
-                ['server-error', {
-                    message: '🖥️ Connection failed: Signaling server error',
-                    diagnostics: [
-                        { type: 'error', message: 'PeerJS signaling server is unavailable' },
-                        { type: 'warning', message: 'This is usually temporary' },
-                        { type: 'warning', message: 'Try again in a few moments' }
-                    ]
-                }]
-            ]);
+            // Get comprehensive error configuration with NAT/firewall specific handling
+            const errorConfig = getComprehensiveErrorConfig(error, analysis);
             
-            const config = errorConfig.get(error.type) ?? {
-                message: `❌ Connection failed: ${error.message || 'Unknown error'}`,
-                diagnostics: [
-                    { type: 'error', message: 'An unexpected error occurred' },
-                    { type: 'warning', message: 'Please try connecting again' }
-                ]
-            };
+            updateConnectionStatus('error', errorConfig.status);
+            addSystemMessage(errorConfig.message);
             
-            updateConnectionStatus('error', 'Connection Failed');
-            addSystemMessage(config.message);
+            // Show network diagnostics
+            showNetworkDiagnostics(errorConfig.diagnostics);
             
-            // Show troubleshooting tips using modern array methods
-            const troubleshootingTips = [
-                '• Double-check the peer ID for typos',
-                '• Ensure both peers are online and ready',
-                '• Try refreshing the page and reconnecting',
-                '• Check your network connection'
-            ];
+            // Show specific troubleshooting steps based on error type
+            showTroubleshootingSteps(errorConfig.troubleshooting);
             
-            addSystemMessage('');
-            addSystemMessage('🔧 Troubleshooting Tips:');
-            troubleshootingTips.forEach(tip => addSystemMessage(tip));
+            // Show fallback suggestions when all connection methods fail
+            if (shouldShowFallbackSuggestions(error, analysis)) {
+                showFallbackSuggestions(error.type);
+            }
             
-            // Show network diagnostics from DiagnosticsEngine
-            showNetworkDiagnostics(config.diagnostics);
+            // Show TURN server information for NAT/firewall issues
+            if (shouldShowTurnServerInfo(error, analysis)) {
+                showTurnServerInformation();
+            }
             
             // Show enhanced diagnostics from DiagnosticsEngine
             showEnhancedDiagnostics(diagnosticReport);
             
             // Clean up connection state
             cleanupConnection();
+        };
+
+        /**
+         * Gets comprehensive error configuration for different NAT/firewall scenarios
+         * @param {Object} error - The error object
+         * @param {Object} analysis - Diagnostic analysis from DiagnosticsEngine
+         * @returns {Object} Comprehensive error configuration
+         */
+        const getComprehensiveErrorConfig = (error, analysis) => {
+            const errorConfigs = new Map([
+                ['peer-unavailable', {
+                    status: 'Peer not found',
+                    message: '🔍 Connection failed: Peer not found or unavailable',
+                    diagnostics: [
+                        { type: 'error', message: 'Target peer ID may be incorrect or offline' },
+                        { type: 'warning', message: 'Verify the peer ID is exactly as provided' },
+                        { type: 'warning', message: 'Ensure the other user is online and ready' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '🔍',
+                            title: 'Verify Peer ID',
+                            description: 'Double-check the peer ID for typos or extra spaces',
+                            action: 'Copy and paste the exact peer ID provided by the other user'
+                        },
+                        {
+                            icon: '👥',
+                            title: 'Check Peer Status',
+                            description: 'Ensure the other user is online and ready to connect',
+                            action: 'Ask them to refresh their page and confirm their peer ID'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Refresh Connection',
+                            description: 'Both users should refresh their pages and try again',
+                            action: 'Press F5 or Ctrl+R to refresh, then retry connection'
+                        }
+                    ]
+                }],
+                ['network', {
+                    status: 'Network issue',
+                    message: '🌐 Connection failed: Network connectivity issue',
+                    diagnostics: [
+                        { type: 'error', message: 'Network connection interrupted or blocked' },
+                        { type: 'warning', message: 'Check your internet connection stability' },
+                        { type: 'warning', message: 'Firewall may be blocking WebRTC traffic' },
+                        { type: 'warning', message: 'Corporate networks often restrict P2P connections' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '📶',
+                            title: 'Check Internet Connection',
+                            description: 'Verify you have a stable internet connection',
+                            action: 'Try loading other websites or run a speed test'
+                        },
+                        {
+                            icon: '🔥',
+                            title: 'Firewall Settings',
+                            description: 'Your firewall may be blocking WebRTC traffic',
+                            action: 'Temporarily disable firewall or add WebRTC exception'
+                        },
+                        {
+                            icon: '🏢',
+                            title: 'Network Restrictions',
+                            description: 'Corporate/school networks often block P2P connections',
+                            action: 'Try using mobile hotspot or different network'
+                        },
+                        {
+                            icon: '🔧',
+                            title: 'Router Configuration',
+                            description: 'Router settings may block peer-to-peer connections',
+                            action: 'Check router UPnP settings or contact network administrator'
+                        }
+                    ]
+                }],
+                ['ice-connection-failed', {
+                    status: 'NAT traversal failed',
+                    message: '🧊 Connection failed: Unable to establish direct connection (NAT/Firewall)',
+                    diagnostics: [
+                        { type: 'error', message: 'Unable to establish direct peer connection' },
+                        { type: 'warning', message: 'Both peers may be behind restrictive NATs/firewalls' },
+                        { type: 'warning', message: 'STUN server connectivity may be limited' },
+                        { type: 'warning', message: 'Symmetric NAT detected - TURN relay required' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '🌐',
+                            title: 'Try Different Network',
+                            description: 'Both peers may be behind restrictive NATs/firewalls',
+                            action: 'Use mobile hotspot, different WiFi, or public network'
+                        },
+                        {
+                            icon: '🔧',
+                            title: 'Router Configuration',
+                            description: 'Your router may be using symmetric NAT or blocking P2P',
+                            action: 'Enable UPnP, port forwarding, or DMZ mode in router settings'
+                        },
+                        {
+                            icon: '🏢',
+                            title: 'Corporate Network',
+                            description: 'Enterprise networks often block WebRTC completely',
+                            action: 'Contact IT support or use personal mobile connection'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'TURN Relay Fallback',
+                            description: 'Direct connection failed - attempting relay connection',
+                            action: 'Wait for automatic TURN relay attempt or retry manually'
+                        }
+                    ]
+                }],
+                ['ice-connection-disconnected', {
+                    status: 'Connection lost',
+                    message: '❄️ Connection lost: Network path changed',
+                    diagnostics: [
+                        { type: 'warning', message: 'Network route between peers changed' },
+                        { type: 'warning', message: 'One peer may have switched networks' },
+                        { type: 'warning', message: 'Connection will attempt to reconnect automatically' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '🔄',
+                            title: 'Automatic Reconnection',
+                            description: 'System will attempt to reconnect automatically',
+                            action: 'Wait for reconnection or click retry to force reconnect'
+                        },
+                        {
+                            icon: '📱',
+                            title: 'Network Switch',
+                            description: 'You or the other peer may have switched networks',
+                            action: 'Ensure stable network connection and avoid switching WiFi/cellular'
+                        },
+                        {
+                            icon: '⚡',
+                            title: 'Power Management',
+                            description: 'Device power saving may have interrupted connection',
+                            action: 'Disable power saving for browser or keep device active'
+                        }
+                    ]
+                }],
+                ['server-error', {
+                    status: 'Signaling server error',
+                    message: '🖥️ Connection failed: Signaling server error',
+                    diagnostics: [
+                        { type: 'error', message: 'PeerJS signaling server is unavailable' },
+                        { type: 'warning', message: 'This is usually temporary' },
+                        { type: 'warning', message: 'Server may be overloaded or under maintenance' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '⏰',
+                            title: 'Wait and Retry',
+                            description: 'Server issues are usually temporary',
+                            action: 'Wait 1-2 minutes and try connecting again'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Refresh Page',
+                            description: 'Refresh to establish new server connection',
+                            action: 'Press F5 or Ctrl+R to refresh and retry'
+                        },
+                        {
+                            icon: '🌐',
+                            title: 'Check Service Status',
+                            description: 'PeerJS cloud service may be experiencing issues',
+                            action: 'Check PeerJS status page or try again later'
+                        }
+                    ]
+                }],
+                ['timeout', {
+                    status: 'Connection timeout',
+                    message: '⏰ Connection timeout: Taking too long to establish connection',
+                    diagnostics: [
+                        { type: 'warning', message: 'Connection establishment exceeded time limit' },
+                        { type: 'warning', message: 'Network latency may be too high' },
+                        { type: 'warning', message: 'Firewall may be causing delays' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '📶',
+                            title: 'Check Connection Speed',
+                            description: 'Slow internet may cause connection timeouts',
+                            action: 'Test your internet speed and ensure stable connection'
+                        },
+                        {
+                            icon: '🌍',
+                            title: 'Geographic Distance',
+                            description: 'Long distances can increase connection time',
+                            action: 'Be patient - international connections take longer'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Retry with Extended Timeout',
+                            description: 'Some networks need more time to establish connections',
+                            action: 'Click retry and wait longer for connection'
+                        }
+                    ]
+                }],
+                ['turn-unavailable', {
+                    status: 'TURN servers unavailable',
+                    message: '🔄 Connection failed: TURN relay servers unavailable',
+                    diagnostics: [
+                        { type: 'error', message: 'Free TURN servers are not accessible' },
+                        { type: 'warning', message: 'Direct P2P connection also failed' },
+                        { type: 'warning', message: 'Premium TURN services may be required' }
+                    ],
+                    troubleshooting: [
+                        {
+                            icon: '🌐',
+                            title: 'Try Different Network',
+                            description: 'Switch to a less restrictive network',
+                            action: 'Use mobile hotspot or public WiFi'
+                        },
+                        {
+                            icon: '💰',
+                            title: 'Premium TURN Services',
+                            description: 'Consider using premium TURN relay services',
+                            action: 'Services like Twilio, Xirsys, or AWS provide reliable TURN servers'
+                        },
+                        {
+                            icon: '🔧',
+                            title: 'Self-hosted TURN',
+                            description: 'Set up your own TURN server for reliable connections',
+                            action: 'Use coturn or similar software on your own server'
+                        }
+                    ]
+                }]
+            ]);
+            
+            return errorConfigs.get(error.type) || {
+                status: 'Unknown error',
+                message: `❌ Connection failed: ${error.message || 'Unknown error'}`,
+                diagnostics: [
+                    { type: 'error', message: 'An unexpected error occurred' },
+                    { type: 'warning', message: 'This may be a new type of connection issue' }
+                ],
+                troubleshooting: [
+                    {
+                        icon: '🔄',
+                        title: 'Try Again',
+                        description: 'An unexpected error occurred',
+                        action: 'Refresh the page and try connecting again'
+                    },
+                    {
+                        icon: '🐛',
+                        title: 'Report Issue',
+                        description: 'If the problem persists, this may be a bug',
+                        action: 'Check browser console for error details and report issue'
+                    }
+                ]
+            };
+        };
+
+        /**
+         * Determines if fallback suggestions should be shown
+         * @param {Object} error - The error object
+         * @param {Object} analysis - Diagnostic analysis
+         * @returns {boolean} Whether to show fallback suggestions
+         */
+        const shouldShowFallbackSuggestions = (error, analysis) => {
+            const fallbackTriggers = [
+                'ice-connection-failed',
+                'turn-unavailable',
+                'timeout'
+            ];
+            
+            return fallbackTriggers.includes(error.type) || 
+                   (analysis && analysis.retryCount >= 3);
+        };
+
+        /**
+         * Determines if TURN server information should be shown
+         * @param {Object} error - The error object
+         * @param {Object} analysis - Diagnostic analysis
+         * @returns {boolean} Whether to show TURN server info
+         */
+        const shouldShowTurnServerInfo = (error, analysis) => {
+            const turnTriggers = [
+                'ice-connection-failed',
+                'network',
+                'turn-unavailable'
+            ];
+            
+            return turnTriggers.includes(error.type);
+        };
+
+        /**
+         * Shows fallback suggestions when all connection methods fail
+         * @param {string} errorType - The type of error that occurred
+         */
+        const showFallbackSuggestions = (errorType) => {
+            addSystemMessage('');
+            addSystemMessage('🔄 Alternative Communication Methods:');
+            
+            const fallbackSuggestions = [
+                '• Try connecting from a different network (mobile hotspot)',
+                '• Use a different device or browser',
+                '• Consider using traditional messaging apps as backup',
+                '• Set up a meeting time to try connecting again',
+                '• Use screen sharing tools like Discord or Zoom for urgent communication'
+            ];
+            
+            fallbackSuggestions.forEach(suggestion => addSystemMessage(suggestion));
+            
+            // Network-specific fallback suggestions
+            if (errorType === 'ice-connection-failed') {
+                addSystemMessage('');
+                addSystemMessage('🌐 Network-specific alternatives:');
+                addSystemMessage('• Both users try connecting from mobile networks');
+                addSystemMessage('• Use public WiFi instead of corporate/school networks');
+                addSystemMessage('• Try connecting at different times when network is less congested');
+            }
+        };
+
+        /**
+         * Shows information about TURN servers and premium services
+         */
+        const showTurnServerInformation = () => {
+            addSystemMessage('');
+            addSystemMessage('🔄 TURN Relay Information:');
+            addSystemMessage('• Free TURN servers have limited capacity and availability');
+            addSystemMessage('• For reliable connections, consider premium TURN services:');
+            addSystemMessage('  - Twilio STUN/TURN Service');
+            addSystemMessage('  - Xirsys Global TURN Network');
+            addSystemMessage('  - AWS TURN Servers');
+            addSystemMessage('• You can also set up your own TURN server using coturn');
+            addSystemMessage('');
+            addSystemMessage('💡 Most connection issues resolve by trying different networks');
         };
         
         /**
@@ -9136,23 +9793,32 @@
         };
         
         /**
-         * Handles PeerJS errors with user-friendly messages
+         * Enhanced PeerJS error handler with comprehensive NAT/firewall scenario handling
          * @param {Object} error - The PeerJS error object
          */
         const handlePeerError = (error) => {
+            // Classify the error for better handling
+            const classifiedError = classifyPeerError(error);
+            
             const errorMessages = new Map([
                 ['peer-unavailable', 'Peer not found - please check the peer ID and try again'],
                 ['network', 'Network error - please check your internet connection and try again'],
                 ['server-error', 'Server error - please try again later'],
-
                 ['ssl-unavailable', 'SSL/HTTPS required for WebRTC - please access via HTTPS'],
                 ['unavailable-id', 'Peer ID unavailable - please try again with a different ID'],
-                ['disconnected', 'Disconnected from signaling server - please refresh and try again']
+                ['disconnected', 'Disconnected from signaling server - please refresh and try again'],
+                ['firewall-blocked', 'Firewall is blocking WebRTC connections'],
+                ['nat-traversal-failed', 'NAT traversal failed - direct connection not possible'],
+                ['symmetric-nat', 'Symmetric NAT detected - TURN relay required'],
+                ['corporate-network', 'Corporate network restrictions detected']
             ]);
             
-            const errorMessage = errorMessages.get(error.type) ?? 
+            const errorMessage = errorMessages.get(classifiedError.type) ?? 
                 `An error occurred: ${error.message || 'Unknown error'}`;
-            addSystemMessage(errorMessage);
+            addSystemMessage(`System: ${errorMessage}`);
+            
+            // Show specific guidance based on classified error
+            showPeerErrorGuidance(classifiedError);
             
             // Modern conditional logic with destructuring
             const { type, message } = error;
@@ -9188,6 +9854,233 @@
                 ];
                 securityMessages.forEach(msg => addSystemMessage(msg));
             }
+        };
+
+        /**
+         * Classifies peer errors for better handling and user guidance
+         * @param {Object} error - The original error object
+         * @returns {Object} Classified error with enhanced type and context
+         */
+        const classifyPeerError = (error) => {
+            const { type, message = '' } = error;
+            
+            // Enhanced error classification based on error patterns
+            const classificationRules = [
+                {
+                    condition: (type, msg) => type === 'network' && msg.includes('firewall'),
+                    newType: 'firewall-blocked',
+                    context: 'firewall'
+                },
+                {
+                    condition: (type, msg) => type === 'network' && msg.includes('corporate'),
+                    newType: 'corporate-network',
+                    context: 'corporate'
+                },
+                {
+                    condition: (type, msg) => type === 'ice-connection-failed' || msg.includes('ICE'),
+                    newType: 'nat-traversal-failed',
+                    context: 'nat'
+                },
+                {
+                    condition: (type, msg) => msg.includes('symmetric') || msg.includes('TURN'),
+                    newType: 'symmetric-nat',
+                    context: 'symmetric-nat'
+                },
+                {
+                    condition: (type, msg) => type === 'server-error' && msg.includes('timeout'),
+                    newType: 'server-timeout',
+                    context: 'timeout'
+                }
+            ];
+            
+            // Apply classification rules
+            for (const rule of classificationRules) {
+                if (rule.condition(type, message)) {
+                    return {
+                        ...error,
+                        type: rule.newType,
+                        originalType: type,
+                        context: rule.context,
+                        classified: true
+                    };
+                }
+            }
+            
+            // Return original error if no classification matches
+            return {
+                ...error,
+                originalType: type,
+                context: 'general',
+                classified: false
+            };
+        };
+
+        /**
+         * Shows specific guidance based on classified peer error
+         * @param {Object} classifiedError - The classified error object
+         */
+        const showPeerErrorGuidance = (classifiedError) => {
+            const guidanceMap = new Map([
+                ['firewall-blocked', [
+                    '🔥 Firewall is blocking WebRTC connections',
+                    '• Temporarily disable firewall to test connection',
+                    '• Add browser to firewall exceptions',
+                    '• Check corporate firewall settings with IT support'
+                ]],
+                ['corporate-network', [
+                    '🏢 Corporate network restrictions detected',
+                    '• Corporate networks often block P2P connections',
+                    '• Try using mobile hotspot or personal network',
+                    '• Contact IT support for WebRTC policy information'
+                ]],
+                ['nat-traversal-failed', [
+                    '🧊 NAT traversal failed - direct connection not possible',
+                    '• Both peers may be behind restrictive NATs',
+                    '• Try connecting from different networks',
+                    '• TURN relay servers may be required'
+                ]],
+                ['symmetric-nat', [
+                    '🔄 Symmetric NAT detected - TURN relay required',
+                    '• Direct P2P connection is not possible',
+                    '• Premium TURN services recommended',
+                    '• Try connecting from mobile network'
+                ]],
+                ['server-timeout', [
+                    '⏰ Server connection timeout',
+                    '• PeerJS signaling server is slow to respond',
+                    '• Check your internet connection speed',
+                    '• Try again in a few moments'
+                ]]
+            ]);
+            
+            const guidance = guidanceMap.get(classifiedError.type);
+            if (guidance) {
+                addSystemMessage('');
+                guidance.forEach(msg => addSystemMessage(msg));
+            }
+        };
+
+        /**
+         * Enhanced error classification for user guidance accuracy
+         * @param {Object} error - The error object to classify
+         * @returns {Object} Classification result with guidance suggestions
+         */
+        const classifyErrorForGuidance = (error) => {
+            const { type, message = '', code } = error;
+            
+            // Network environment detection
+            const networkContext = {
+                isCorporate: detectCorporateNetwork(),
+                isMobile: detectMobileNetwork(),
+                isSecure: window.isSecureContext,
+                hasFirewall: detectFirewallPresence()
+            };
+            
+            // Error pattern matching with network context
+            const patterns = [
+                {
+                    match: type === 'peer-unavailable',
+                    classification: 'peer-not-found',
+                    confidence: 0.9,
+                    guidance: 'peer-id-verification'
+                },
+                {
+                    match: type === 'network' && networkContext.isCorporate,
+                    classification: 'corporate-restriction',
+                    confidence: 0.8,
+                    guidance: 'corporate-network-bypass'
+                },
+                {
+                    match: type === 'ice-connection-failed' && networkContext.hasFirewall,
+                    classification: 'firewall-blocking',
+                    confidence: 0.7,
+                    guidance: 'firewall-configuration'
+                },
+                {
+                    match: message.includes('symmetric') || message.includes('TURN'),
+                    classification: 'symmetric-nat',
+                    confidence: 0.8,
+                    guidance: 'turn-relay-required'
+                },
+                {
+                    match: type === 'timeout' && networkContext.isMobile,
+                    classification: 'mobile-timeout',
+                    confidence: 0.6,
+                    guidance: 'mobile-network-optimization'
+                }
+            ];
+            
+            // Find best matching pattern
+            const bestMatch = patterns
+                .filter(p => p.match)
+                .sort((a, b) => b.confidence - a.confidence)[0];
+            
+            return bestMatch || {
+                classification: 'unknown',
+                confidence: 0.1,
+                guidance: 'general-troubleshooting'
+            };
+        };
+
+        /**
+         * Detects if user is on a corporate network
+         * @returns {boolean} True if corporate network detected
+         */
+        const detectCorporateNetwork = () => {
+            const hostname = window.location.hostname;
+            const userAgent = navigator.userAgent;
+            
+            // Corporate network indicators
+            const corporateIndicators = [
+                hostname.includes('.corp'),
+                hostname.includes('.internal'),
+                hostname.includes('.local'),
+                userAgent.includes('Corporate'),
+                // Check for common corporate proxy headers (if available)
+                document.referrer.includes('proxy')
+            ];
+            
+            return corporateIndicators.some(indicator => indicator);
+        };
+
+        /**
+         * Detects if user is on a mobile network
+         * @returns {boolean} True if mobile network detected
+         */
+        const detectMobileNetwork = () => {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const userAgent = navigator.userAgent;
+            
+            if (connection) {
+                return connection.type === 'cellular' || 
+                       connection.effectiveType === '2g' || 
+                       connection.effectiveType === '3g' || 
+                       connection.effectiveType === '4g';
+            }
+            
+            // Fallback to user agent detection
+            return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        };
+
+        /**
+         * Detects potential firewall presence
+         * @returns {boolean} True if firewall likely present
+         */
+        const detectFirewallPresence = () => {
+            // This is a heuristic detection - not 100% accurate
+            const hostname = window.location.hostname;
+            
+            // Corporate domains often have firewalls
+            const firewallIndicators = [
+                hostname.includes('.corp'),
+                hostname.includes('.gov'),
+                hostname.includes('.edu'),
+                hostname.includes('.mil'),
+                // Check if running on non-standard ports (may indicate proxy)
+                window.location.port && window.location.port !== '80' && window.location.port !== '443'
+            ];
+            
+            return firewallIndicators.some(indicator => indicator);
         };
         
         // Expose variables globally for testing
