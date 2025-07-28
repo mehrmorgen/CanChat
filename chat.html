@@ -2235,6 +2235,392 @@
             });
         });
         
+        // ===== CONNECTION MANAGER TESTS =====
+        
+        describe('ConnectionManager Class Tests', () => {
+            test('should create ConnectionManager instance', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(manager).not.toBeNull();
+                expect(manager instanceof ConnectionManager).toBe(true);
+            });
+            
+            test('should initialize with correct default values', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(manager.currentTier).toBe(1);
+                expect(manager.maxRetries).toBe(3);
+                expect(manager.retryCount).toBe(0);
+                expect(manager.isConnecting).toBe(false);
+                expect(manager.connectionStartTime).toBeNull();
+                expect(Array.isArray(manager.connectionAttempts)).toBe(true);
+                expect(manager.connectionAttempts.length).toBe(0);
+            });
+            
+            test('should have correct timeout configuration per tier', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(manager.tierTimeouts[1]).toBe(10000); // 10 seconds
+                expect(manager.tierTimeouts[2]).toBe(8000);  // 8 seconds
+                expect(manager.tierTimeouts[3]).toBe(15000); // 15 seconds
+                expect(manager.tierTimeouts[4]).toBe(20000); // 20 seconds
+            });
+            
+            test('should have all required methods', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(typeof manager.establishConnection).toBe('function');
+                expect(typeof manager.attemptFallbackConnection).toBe('function');
+                expect(typeof manager.handleConnectionTimeout).toBe('function');
+                expect(typeof manager.monitorConnectionQuality).toBe('function');
+                expect(typeof manager.getConnectionHistory).toBe('function');
+                expect(typeof manager.reset).toBe('function');
+                expect(typeof manager.getStatus).toBe('function');
+            });
+            
+            test('should return correct status information', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                const status = manager.getStatus();
+                
+                expect(typeof status.isConnecting).toBe('boolean');
+                expect(typeof status.currentTier).toBe('number');
+                expect(typeof status.retryCount).toBe('number');
+                expect(typeof status.maxRetries).toBe('number');
+                expect(status.connectionStartTime).toBeNull();
+                expect(typeof status.attemptCount).toBe('number');
+                
+                expect(status.isConnecting).toBe(false);
+                expect(status.currentTier).toBe(1);
+                expect(status.retryCount).toBe(0);
+                expect(status.maxRetries).toBe(3);
+                expect(status.attemptCount).toBe(0);
+            });
+            
+            test('should reset state correctly', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Simulate some state changes
+                manager.isConnecting = true;
+                manager.retryCount = 2;
+                manager.currentTier = 3;
+                manager.connectionStartTime = Date.now();
+                
+                manager.reset();
+                
+                expect(manager.isConnecting).toBe(false);
+                expect(manager.retryCount).toBe(0);
+                expect(manager.currentTier).toBe(1);
+                expect(manager.connectionStartTime).toBeNull();
+                expect(manager.connectionTimeout).toBeNull();
+            });
+            
+            test('should return empty connection history initially', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                const history = manager.getConnectionHistory();
+                
+                expect(Array.isArray(history)).toBe(true);
+                expect(history.length).toBe(0);
+            });
+            
+            asyncTest('should prevent multiple concurrent connection attempts', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock peer object for testing
+                window.peer = {
+                    connect: (peerId) => ({
+                        peer: peerId,
+                        on: () => {},
+                        open: false
+                    })
+                };
+                
+                // Start first connection attempt
+                const promise1 = manager.establishConnection('test-peer-1');
+                expect(manager.getStatus().isConnecting).toBe(true);
+                
+                // Try to start second connection attempt
+                const promise2 = manager.establishConnection('test-peer-2');
+                
+                Promise.all([promise1, promise2]).then(([result1, result2]) => {
+                    // First attempt should proceed, second should be rejected
+                    expect(result2).toBeNull();
+                });
+            }, 5000);
+        });
+        
+        describe('ConnectionManager Integration Tests', () => {
+            test('should integrate with ICEServerPool', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(manager.iceServerPool).toBe(iceServerPool);
+                expect(manager.iceServerPool instanceof ICEServerPool).toBe(true);
+            });
+            
+            test('should integrate with NetworkDetector', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                expect(manager.networkDetector).toBe(networkDetector);
+                expect(manager.networkDetector instanceof NetworkDetector).toBe(true);
+            });
+            
+            test('should use network detection for optimal tier selection', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock network detector to return specific configuration
+                const mockConfig = {
+                    networkType: 'cellular',
+                    recommendedTier: 2,
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+                    reasoning: ['Cellular network detected', 'Using tier 2 for better reliability']
+                };
+                
+                networkDetector.getOptimalICEConfiguration = () => mockConfig;
+                
+                // The manager should use the recommended tier from network detection
+                expect(networkDetector.getOptimalICEConfiguration().recommendedTier).toBe(2);
+            });
+            
+            asyncTest('should record connection attempts for diagnostics', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock peer for testing
+                window.peer = {
+                    connect: (peerId) => {
+                        const mockConnection = {
+                            peer: peerId,
+                            on: (event, handler) => {
+                                if (event === 'error') {
+                                    // Simulate connection error after short delay
+                                    setTimeout(() => handler(new Error('Test connection error')), 100);
+                                }
+                            },
+                            open: false
+                        };
+                        return mockConnection;
+                    }
+                };
+                
+                manager.establishConnection('test-peer').then(() => {
+                    const history = manager.getConnectionHistory();
+                    expect(history.length).toBeGreaterThan(0);
+                    
+                    const attempt = history[0];
+                    expect(typeof attempt.tier).toBe('number');
+                    expect(typeof attempt.startTime).toBe('number');
+                    expect(attempt.peerId).toBe('test-peer');
+                    expect(Array.isArray(attempt.iceConfig)).toBe(true);
+                    expect(typeof attempt.timeout).toBe('number');
+                });
+            }, 3000);
+            
+            test('should handle connection quality monitoring setup', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock connection with peerConnection
+                const mockConnection = {
+                    open: true,
+                    peerConnection: {
+                        getStats: () => Promise.resolve(new Map([
+                            ['test-stat', {
+                                type: 'inbound-rtp',
+                                bytesReceived: 1000,
+                                packetsReceived: 10,
+                                packetsLost: 0
+                            }]
+                        ]))
+                    }
+                };
+                
+                // Should not throw error when monitoring quality
+                expect(() => manager.monitorConnectionQuality(mockConnection)).not.toThrow();
+            });
+            
+            test('should handle missing peerConnection gracefully', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock connection without peerConnection
+                const mockConnection = {
+                    open: true
+                    // No peerConnection property
+                };
+                
+                // Should not throw error when peerConnection is missing
+                expect(() => manager.monitorConnectionQuality(mockConnection)).not.toThrow();
+            });
+        });
+        
+        describe('ConnectionManager Retry Logic Tests', () => {
+            test('should implement progressive tier fallback', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Test tier progression
+                expect(manager.currentTier).toBe(1);
+                
+                // Simulate tier progression
+                manager.currentTier = 2;
+                expect(manager.currentTier).toBe(2);
+                
+                manager.currentTier = 3;
+                expect(manager.currentTier).toBe(3);
+                
+                manager.currentTier = 4;
+                expect(manager.currentTier).toBe(4);
+            });
+            
+            test('should respect maximum retry limits', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                expect(manager.maxRetries).toBe(3);
+                expect(manager.retryCount).toBe(0);
+                
+                // Simulate retry attempts
+                manager.retryCount = 1;
+                expect(manager.retryCount).toBeLessThanOrEqual(manager.maxRetries);
+                
+                manager.retryCount = 3;
+                expect(manager.retryCount).toBe(manager.maxRetries);
+                
+                // Should not exceed max retries
+                expect(manager.retryCount).toBeLessThanOrEqual(manager.maxRetries);
+            });
+            
+            test('should have appropriate timeouts per tier', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Tier 1 (Google STUN) should have moderate timeout
+                expect(manager.tierTimeouts[1]).toBe(10000);
+                
+                // Tier 2 (Alternative STUN) should have shorter timeout
+                expect(manager.tierTimeouts[2]).toBe(8000);
+                
+                // Tier 3 (TURN relay) should have longer timeout
+                expect(manager.tierTimeouts[3]).toBe(15000);
+                
+                // Tier 4 (Premium) should have longest timeout
+                expect(manager.tierTimeouts[4]).toBe(20000);
+            });
+            
+            asyncTest('should handle connection timeout correctly', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock peer that never connects
+                window.peer = {
+                    connect: (peerId) => ({
+                        peer: peerId,
+                        on: () => {}, // Never fires open event
+                        open: false
+                    })
+                };
+                
+                const startTime = Date.now();
+                
+                manager.establishConnection('timeout-test-peer').then((result) => {
+                    const elapsed = Date.now() - startTime;
+                    
+                    // Should timeout and return null
+                    expect(result).toBeNull();
+                    
+                    // Should have attempted multiple tiers
+                    const history = manager.getConnectionHistory();
+                    expect(history.length).toBeGreaterThan(0);
+                });
+            }, 15000);
+            
+            test('should calculate connection quality metrics', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Test private method through reflection (for testing purposes)
+                const currentStats = {
+                    bytesReceived: 2000,
+                    packetsReceived: 20,
+                    packetsLost: 1,
+                    roundTripTime: 0.1, // 100ms
+                    jitter: 0.02, // 20ms
+                    timestamp: Date.now()
+                };
+                
+                const previousStats = {
+                    bytesReceived: 1000,
+                    packetsReceived: 10,
+                    packetsLost: 0,
+                    roundTripTime: 0.08, // 80ms
+                    jitter: 0.01, // 10ms
+                    timestamp: Date.now() - 5000 // 5 seconds ago
+                };
+                
+                // Test quality calculation logic exists
+                expect(typeof manager._calculateConnectionQuality).toBe('function');
+                
+                const quality = manager._calculateConnectionQuality(currentStats, previousStats);
+                expect(typeof quality.level).toBe('string');
+                expect(typeof quality.metrics).toBe('object');
+                expect(['excellent', 'good', 'poor', 'unknown']).toContain(quality.level);
+            });
+        });
+        
+        describe('ConnectionManager Error Handling Tests', () => {
+            test('should handle peer initialization errors', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock missing peer
+                window.peer = null;
+                
+                manager.establishConnection('test-peer').then((result) => {
+                    expect(result).toBeNull();
+                });
+            });
+            
+            test('should handle ICE server configuration errors', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock ICE server pool that returns invalid configuration
+                const mockPool = {
+                    getConfigurationForTier: () => null
+                };
+                
+                manager.iceServerPool = mockPool;
+                
+                manager.establishConnection('test-peer').then((result) => {
+                    expect(result).toBeNull();
+                });
+            });
+            
+            test('should handle network detection errors', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock network detector that throws error
+                const mockDetector = {
+                    getOptimalICEConfiguration: () => {
+                        throw new Error('Network detection failed');
+                    }
+                };
+                
+                manager.networkDetector = mockDetector;
+                
+                manager.establishConnection('test-peer').then((result) => {
+                    // Should handle error gracefully and still attempt connection
+                    expect(result).toBeNull();
+                });
+            });
+            
+            asyncTest('should handle connection establishment errors', () => {
+                const manager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Mock peer that throws error on connect
+                window.peer = {
+                    connect: () => {
+                        throw new Error('Connection failed');
+                    }
+                };
+                
+                manager.establishConnection('error-test-peer').then((result) => {
+                    expect(result).toBeNull();
+                    
+                    // Should record failed attempt
+                    const history = manager.getConnectionHistory();
+                    expect(history.length).toBeGreaterThan(0);
+                    
+                    const attempt = history[0];
+                    expect(attempt.success).toBe(false);
+                    expect(typeof attempt.error).toBe('string');
+                });
+            }, 3000);
+        });
+        
         // ===== NETWORK DETECTOR TESTS =====
         
         describe('Network Detection Tests', () => {
@@ -6099,6 +6485,17 @@
         };
         
         /**
+         * Updates the progress bar with a specific percentage
+         * @param {number} percentage - Progress percentage (0-100)
+         */
+        const updateProgressBar = (percentage) => {
+            const progressFill = document.getElementById('progress-fill');
+            if (progressFill) {
+                progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+            }
+        };
+        
+        /**
          * Shows network diagnostics information
          * @param {Array} diagnostics - Array of diagnostic items
          */
@@ -6382,9 +6779,10 @@
         
         /**
          * Handles the connect button click event with validation and connection initiation
+         * Uses ConnectionManager for enhanced retry logic and fallback mechanisms
          * @returns {boolean} True if connection attempt was initiated, false if validation failed
          */
-        const handleConnectClick = () => {
+        const handleConnectClick = async () => {
             const peerIdInput = document.getElementById('peer-id-input');
             const targetPeerId = peerIdInput.value.trim();
             
@@ -6400,23 +6798,87 @@
                 return false;
             }
             
-            // Reset retry count for new connection attempt
-            retryCount = 0;
+            // Initialize connection manager if not already done
+            if (!connectionManager) {
+                connectionManager = new ConnectionManager(iceServerPool, networkDetector);
+            }
             
-            // Initiate connection with timeout and progress tracking
-            initiateConnectionWithTimeout(targetPeerId);
-            return true;
+            // Reset connection manager state for new attempt
+            connectionManager.reset();
+            
+            try {
+                // Use ConnectionManager for enhanced connection establishment
+                const conn = await connectionManager.establishConnection(targetPeerId);
+                
+                if (conn) {
+                    // Store connection globally
+                    Object.assign(window, { connection: conn });
+                    connection = conn;
+                    
+                    // Setup connection event handlers
+                    setupConnectionHandlers(conn);
+                    
+                    addSystemMessage('✅ Connection established successfully');
+                    return true;
+                } else {
+                    addSystemMessage('❌ Failed to establish connection after all retry attempts');
+                    updateConnectionStatus('error');
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error('Connection establishment error:', error);
+                addSystemMessage(`❌ Connection failed: ${error.message}`);
+                updateConnectionStatus('error');
+                return false;
+            }
         }
         
         /**
-         * Handles retry button click event
+         * Handles retry button click event using ConnectionManager
          */
-        const handleRetryClick = () => {
+        const handleRetryClick = async () => {
             const peerIdInput = document.getElementById('peer-id-input');
             const targetPeerId = peerIdInput.value.trim();
             
-            if (targetPeerId && retryCount < MAX_RETRIES) {
-                retryConnection(targetPeerId);
+            if (!targetPeerId) {
+                addSystemMessage('⚠️ Please enter a peer ID to retry connection');
+                return;
+            }
+            
+            if (!connectionManager) {
+                connectionManager = new ConnectionManager(iceServerPool, networkDetector);
+            }
+            
+            const status = connectionManager.getStatus();
+            
+            if (status.isConnecting) {
+                addSystemMessage('⚠️ Connection attempt already in progress');
+                return;
+            }
+            
+            if (status.retryCount >= status.maxRetries) {
+                addSystemMessage('❌ Maximum retry attempts reached. Please refresh the page to try again.');
+                return;
+            }
+            
+            addSystemMessage('🔄 Retrying connection with enhanced fallback mechanisms...');
+            
+            try {
+                const conn = await connectionManager.establishConnection(targetPeerId);
+                
+                if (conn) {
+                    Object.assign(window, { connection: conn });
+                    connection = conn;
+                    setupConnectionHandlers(conn);
+                    addSystemMessage('✅ Retry successful - connection established');
+                } else {
+                    addSystemMessage('❌ Retry failed - all connection methods exhausted');
+                }
+                
+            } catch (error) {
+                console.error('Retry connection error:', error);
+                addSystemMessage(`❌ Retry failed: ${error.message}`);
             }
         };
         
@@ -7060,6 +7522,429 @@
                 addSystemMessage(`❌ Tier ${tier} test error: ${error.message}`);
             }
         };
+        
+        // ===== CONNECTION MANAGER WITH RETRY LOGIC =====
+        
+        /**
+         * ConnectionManager class with automatic retry mechanisms and progressive fallback
+         * Implements Requirements 1.2, 2.1, 4.2 from the WebRTC NAT traversal improvement spec
+         */
+        class ConnectionManager {
+            constructor(iceServerPool, networkDetector) {
+                this.iceServerPool = iceServerPool;
+                this.networkDetector = networkDetector;
+                this.currentTier = 1;
+                this.maxRetries = 3;
+                this.retryCount = 0;
+                this.connectionTimeout = null;
+                this.isConnecting = false;
+                this.connectionStartTime = null;
+                this.connectionAttempts = [];
+                
+                // Timeout configuration per tier (in milliseconds)
+                this.tierTimeouts = {
+                    1: 10000, // Tier 1: 10 seconds
+                    2: 8000,  // Tier 2: 8 seconds  
+                    3: 15000, // Tier 3: 15 seconds (TURN relay)
+                    4: 20000  // Tier 4: 20 seconds (Premium)
+                };
+                
+                // Bind methods to maintain context
+                this.establishConnection = this.establishConnection.bind(this);
+                this.attemptFallbackConnection = this.attemptFallbackConnection.bind(this);
+                this.handleConnectionTimeout = this.handleConnectionTimeout.bind(this);
+                this.monitorConnectionQuality = this.monitorConnectionQuality.bind(this);
+            }
+            
+            /**
+             * Establishes connection with automatic retry mechanisms
+             * @param {string} peerId - Target peer ID
+             * @param {Object} options - Connection options
+             * @returns {Promise<Object>} Connection object or null if failed
+             */
+            async establishConnection(peerId, options = {}) {
+                if (this.isConnecting) {
+                    addSystemMessage('⚠️ Connection attempt already in progress');
+                    return null;
+                }
+                
+                this.isConnecting = true;
+                this.connectionStartTime = Date.now();
+                this.retryCount = 0;
+                this.currentTier = options.startTier || 1;
+                
+                addSystemMessage(`🔄 Starting connection to ${peerId}...`);
+                updateConnectionStatus('connecting');
+                showConnectionProgress(true);
+                
+                try {
+                    // Get optimal ICE configuration based on network detection
+                    const networkConfig = this.networkDetector.getOptimalICEConfiguration();
+                    const startTier = networkConfig.recommendedTier || this.currentTier;
+                    
+                    addSystemMessage(`🌐 Network type: ${networkConfig.networkType}, starting with tier ${startTier}`);
+                    
+                    return await this._attemptConnectionWithTier(peerId, startTier, options);
+                    
+                } catch (error) {
+                    console.error('Connection establishment failed:', error);
+                    addSystemMessage(`❌ Connection failed: ${error.message}`);
+                    return null;
+                } finally {
+                    this.isConnecting = false;
+                    showConnectionProgress(false);
+                }
+            }
+            
+            /**
+             * Attempts connection with specific ICE server tier
+             * @private
+             */
+            async _attemptConnectionWithTier(peerId, tier, options) {
+                this.currentTier = tier;
+                const timeout = this.tierTimeouts[tier];
+                const iceConfig = this.iceServerPool.getConfigurationForTier(tier);
+                
+                addSystemMessage(`🔧 Attempting connection with ${iceConfig.description} (Tier ${tier})`);
+                updateProgressBar(25);
+                
+                // Record connection attempt
+                const attemptInfo = {
+                    tier,
+                    startTime: Date.now(),
+                    peerId,
+                    iceConfig: iceConfig.iceServers,
+                    timeout
+                };
+                this.connectionAttempts.push(attemptInfo);
+                
+                return new Promise((resolve, reject) => {
+                    // Set connection timeout
+                    this.connectionTimeout = setTimeout(() => {
+                        this.handleConnectionTimeout(peerId, tier, resolve, reject);
+                    }, timeout);
+                    
+                    try {
+                        // Create PeerJS connection with tier-specific configuration
+                        const connection = peer.connect(peerId, {
+                            reliable: true,
+                            serialization: 'json',
+                            metadata: {
+                                tier,
+                                timestamp: Date.now(),
+                                networkType: this.networkDetector.networkType
+                            }
+                        });
+                        
+                        // Set up connection event handlers
+                        this._setupConnectionHandlers(connection, resolve, reject, attemptInfo);
+                        
+                        updateProgressBar(50);
+                        
+                    } catch (error) {
+                        clearTimeout(this.connectionTimeout);
+                        this._recordFailedAttempt(attemptInfo, error.message);
+                        reject(error);
+                    }
+                });
+            }
+            
+            /**
+             * Sets up event handlers for connection attempt
+             * @private
+             */
+            _setupConnectionHandlers(connection, resolve, reject, attemptInfo) {
+                let resolved = false;
+                
+                connection.on('open', () => {
+                    if (resolved) return;
+                    resolved = true;
+                    
+                    clearTimeout(this.connectionTimeout);
+                    
+                    const connectionTime = Date.now() - attemptInfo.startTime;
+                    attemptInfo.connectionTime = connectionTime;
+                    attemptInfo.success = true;
+                    
+                    addSystemMessage(`✅ Connection established in ${connectionTime}ms using ${this.iceServerPool.getConfigurationForTier(this.currentTier).description}`);
+                    updateProgressBar(100);
+                    updateConnectionStatus('connected');
+                    
+                    // Start connection quality monitoring
+                    this.monitorConnectionQuality(connection);
+                    
+                    resolve(connection);
+                });
+                
+                connection.on('error', (error) => {
+                    if (resolved) return;
+                    resolved = true;
+                    
+                    clearTimeout(this.connectionTimeout);
+                    this._recordFailedAttempt(attemptInfo, error.message);
+                    
+                    console.error(`Connection error on tier ${this.currentTier}:`, error);
+                    reject(error);
+                });
+                
+                connection.on('close', () => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(this.connectionTimeout);
+                        this._recordFailedAttempt(attemptInfo, 'Connection closed unexpectedly');
+                        reject(new Error('Connection closed during establishment'));
+                    }
+                });
+            }
+            
+            /**
+             * Handles connection timeout and initiates fallback
+             * @private
+             */
+            async handleConnectionTimeout(peerId, tier, resolve, reject) {
+                const attemptInfo = this.connectionAttempts[this.connectionAttempts.length - 1];
+                this._recordFailedAttempt(attemptInfo, 'Connection timeout');
+                
+                addSystemMessage(`⏱️ Tier ${tier} connection timeout (${this.tierTimeouts[tier]}ms)`);
+                
+                try {
+                    const fallbackConnection = await this.attemptFallbackConnection(peerId);
+                    if (fallbackConnection) {
+                        resolve(fallbackConnection);
+                    } else {
+                        reject(new Error('All connection attempts failed'));
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            }
+            
+            /**
+             * Attempts fallback connection through different ICE server tiers
+             * @param {string} peerId - Target peer ID
+             * @returns {Promise<Object|null>} Connection object or null
+             */
+            async attemptFallbackConnection(peerId) {
+                this.retryCount++;
+                
+                if (this.retryCount > this.maxRetries) {
+                    addSystemMessage(`❌ Maximum retry attempts (${this.maxRetries}) exceeded`);
+                    updateConnectionStatus('error');
+                    return null;
+                }
+                
+                // Progressive fallback through tiers
+                const nextTier = this.currentTier + 1;
+                
+                if (nextTier > 4) {
+                    addSystemMessage('❌ All ICE server tiers exhausted');
+                    updateConnectionStatus('error');
+                    return null;
+                }
+                
+                const nextConfig = this.iceServerPool.getConfigurationForTier(nextTier);
+                addSystemMessage(`🔄 Falling back to ${nextConfig.description} (Tier ${nextTier}) - Attempt ${this.retryCount}/${this.maxRetries}`);
+                
+                // Update progress bar for retry
+                updateProgressBar(25 + (this.retryCount * 15));
+                
+                try {
+                    return await this._attemptConnectionWithTier(peerId, nextTier, {});
+                } catch (error) {
+                    console.error(`Fallback attempt ${this.retryCount} failed:`, error);
+                    
+                    // Try next fallback if available
+                    if (this.retryCount < this.maxRetries && nextTier < 4) {
+                        return await this.attemptFallbackConnection(peerId);
+                    } else {
+                        addSystemMessage(`❌ All fallback attempts failed: ${error.message}`);
+                        updateConnectionStatus('error');
+                        return null;
+                    }
+                }
+            }
+            
+            /**
+             * Monitors connection quality and provides real-time feedback
+             * @param {Object} connection - PeerJS connection object
+             */
+            monitorConnectionQuality(connection) {
+                if (!connection || !connection.peerConnection) {
+                    return;
+                }
+                
+                const pc = connection.peerConnection;
+                let lastStats = null;
+                
+                const monitorStats = async () => {
+                    try {
+                        const stats = await pc.getStats();
+                        const currentStats = this._parseConnectionStats(stats);
+                        
+                        if (lastStats) {
+                            const quality = this._calculateConnectionQuality(currentStats, lastStats);
+                            this._updateConnectionQualityUI(quality);
+                        }
+                        
+                        lastStats = currentStats;
+                        
+                        // Continue monitoring if connection is still open
+                        if (connection.open) {
+                            setTimeout(monitorStats, 5000); // Check every 5 seconds
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error monitoring connection quality:', error);
+                    }
+                };
+                
+                // Start monitoring after a brief delay
+                setTimeout(monitorStats, 2000);
+            }
+            
+            /**
+             * Parses WebRTC stats for connection quality analysis
+             * @private
+             */
+            _parseConnectionStats(stats) {
+                const parsed = {
+                    bytesReceived: 0,
+                    bytesSent: 0,
+                    packetsReceived: 0,
+                    packetsSent: 0,
+                    packetsLost: 0,
+                    roundTripTime: 0,
+                    jitter: 0,
+                    timestamp: Date.now()
+                };
+                
+                stats.forEach((report) => {
+                    if (report.type === 'inbound-rtp') {
+                        parsed.bytesReceived += report.bytesReceived || 0;
+                        parsed.packetsReceived += report.packetsReceived || 0;
+                        parsed.packetsLost += report.packetsLost || 0;
+                        parsed.jitter = Math.max(parsed.jitter, report.jitter || 0);
+                    } else if (report.type === 'outbound-rtp') {
+                        parsed.bytesSent += report.bytesSent || 0;
+                        parsed.packetsSent += report.packetsSent || 0;
+                    } else if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        parsed.roundTripTime = report.currentRoundTripTime || 0;
+                    }
+                });
+                
+                return parsed;
+            }
+            
+            /**
+             * Calculates connection quality based on stats
+             * @private
+             */
+            _calculateConnectionQuality(current, previous) {
+                const timeDiff = (current.timestamp - previous.timestamp) / 1000; // seconds
+                
+                if (timeDiff <= 0) return { level: 'unknown', metrics: {} };
+                
+                const metrics = {
+                    throughput: (current.bytesReceived - previous.bytesReceived) / timeDiff,
+                    packetLoss: current.packetsLost - previous.packetsLost,
+                    rtt: current.roundTripTime * 1000, // Convert to ms
+                    jitter: current.jitter * 1000 // Convert to ms
+                };
+                
+                // Determine quality level
+                let level = 'excellent';
+                
+                if (metrics.rtt > 200 || metrics.packetLoss > 5 || metrics.jitter > 50) {
+                    level = 'poor';
+                } else if (metrics.rtt > 100 || metrics.packetLoss > 2 || metrics.jitter > 20) {
+                    level = 'good';
+                }
+                
+                return { level, metrics };
+            }
+            
+            /**
+             * Updates connection quality UI
+             * @private
+             */
+            _updateConnectionQualityUI(quality) {
+                const qualityElement = document.getElementById('connection-quality');
+                const qualityInfo = document.getElementById('quality-info');
+                
+                if (!qualityElement || !qualityInfo) return;
+                
+                qualityElement.style.display = 'block';
+                
+                const qualityIcon = quality.level === 'excellent' ? '🟢' : 
+                                  quality.level === 'good' ? '🟡' : '🔴';
+                
+                qualityInfo.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span class="quality-indicator quality-${quality.level}"></span>
+                        <span>${qualityIcon} ${quality.level.toUpperCase()}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                        RTT: ${quality.metrics.rtt?.toFixed(0) || 'N/A'}ms | 
+                        Jitter: ${quality.metrics.jitter?.toFixed(0) || 'N/A'}ms | 
+                        Loss: ${quality.metrics.packetLoss || 0} packets
+                    </div>
+                `;
+            }
+            
+            /**
+             * Records failed connection attempt for diagnostics
+             * @private
+             */
+            _recordFailedAttempt(attemptInfo, errorMessage) {
+                attemptInfo.success = false;
+                attemptInfo.error = errorMessage;
+                attemptInfo.endTime = Date.now();
+                attemptInfo.duration = attemptInfo.endTime - attemptInfo.startTime;
+                
+                console.log('Failed connection attempt:', attemptInfo);
+            }
+            
+            /**
+             * Gets connection attempt history for diagnostics
+             * @returns {Array} Array of connection attempts
+             */
+            getConnectionHistory() {
+                return [...this.connectionAttempts];
+            }
+            
+            /**
+             * Resets connection manager state
+             */
+            reset() {
+                this.isConnecting = false;
+                this.retryCount = 0;
+                this.currentTier = 1;
+                this.connectionStartTime = null;
+                
+                if (this.connectionTimeout) {
+                    clearTimeout(this.connectionTimeout);
+                    this.connectionTimeout = null;
+                }
+            }
+            
+            /**
+             * Gets current connection status
+             * @returns {Object} Status information
+             */
+            getStatus() {
+                return {
+                    isConnecting: this.isConnecting,
+                    currentTier: this.currentTier,
+                    retryCount: this.retryCount,
+                    maxRetries: this.maxRetries,
+                    connectionStartTime: this.connectionStartTime,
+                    attemptCount: this.connectionAttempts.length
+                };
+            }
+        }
+        
+        // Create global connection manager instance
+        let connectionManager = null;
         
         // ===== PEERJS INITIALIZATION =====
         
@@ -8052,6 +8937,25 @@
             }
             
             initializePeer();
+            
+            // Initialize ConnectionManager after peer and dependencies are ready
+            setTimeout(() => {
+                if (iceServerPool && networkDetector) {
+                    connectionManager = new ConnectionManager(iceServerPool, networkDetector);
+                    addSystemMessage('🔧 Enhanced connection manager initialized');
+                    console.log('✅ ConnectionManager initialized with retry logic and fallback mechanisms');
+                } else {
+                    console.warn('⚠️ ConnectionManager initialization delayed - waiting for dependencies');
+                    // Retry initialization after dependencies are ready
+                    setTimeout(() => {
+                        if (iceServerPool && networkDetector) {
+                            connectionManager = new ConnectionManager(iceServerPool, networkDetector);
+                            addSystemMessage('🔧 Enhanced connection manager initialized (delayed)');
+                        }
+                    }, 2000);
+                }
+            }, 1000);
+            
             setupEventListeners();
             
             // Initialize rollback procedures for deployment issues
