@@ -48,20 +48,20 @@
   - Commit
   - _Requirements: 1.3, 2.4, 3.2_
 
-- [ ] 7. Integrate enhanced connection system with existing chat application
+- [x] 7. Integrate enhanced connection system with existing chat application
   - Replace existing PeerJS initialization with new connection management system
   - Update connection event handlers to use new diagnostic capabilities
   - Integrate progress indicators with existing UI components
   - Write end-to-end tests for complete connection workflow
-  - Commit
+  - Commit with the checked off task in the tasks file in a single commit
   - _Requirements: 1.1, 2.1, 4.1, 5.1_
 
-- [ ] 8. Add connection quality monitoring and adaptive optimization
+- [x] 8. Add connection quality monitoring and adaptive optimization
   - Implement real-time connection quality monitoring
   - Add automatic ICE server re-selection based on performance
   - Create connection stability detection and re-establishment logic
   - Write tests for connection quality monitoring and adaptive behavior
-  - Commit
+  - Commit with the checked off task in the tasks file in a single commit
   - _Requirements: 3.4, 4.2, 4.3_
 
 - [ ] 9. Create comprehensive error handling and user guidance system
@@ -69,7 +69,7 @@
   - Add user guidance for network configuration issues
   - Create fallback suggestions when all connection methods fail
   - Write tests for error classification and user guidance accuracy
-  - Commit
+  - Commit with the checked off task in the tasks file in a single commit
   - _Requirements: 2.4, 5.2, 5.3_
 
 - [ ] 10. Add testing and validation framework for network scenarios
@@ -77,5 +77,5 @@
   - Implement automated testing for cross-network connection scenarios
   - Add performance benchmarking for connection establishment times
   - Write comprehensive test suite covering all connection failure scenarios
-  - Commit
+  - Commit with the checked off task in the tasks file in a single commit
   - _Requirements: 1.1, 2.1, 3.1, 4.1_

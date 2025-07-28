@@ -5379,6 +5379,135 @@
                 expect(typeof stopPerformanceMonitoring).toBe('function');
             });
             
+            test('should have adaptive optimization functions defined', () => {
+                expect(typeof analyzeConnectionQualityTrends).toBe('function');
+                expect(typeof triggerAdaptiveOptimization).toBe('function');
+                expect(typeof attemptConnectionOptimization).toBe('function');
+                expect(typeof reestablishConnection).toBe('function');
+                expect(typeof checkConnectionStability).toBe('function');
+            });
+            
+            test('should analyze connection quality trends correctly', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 150, packetLoss: 2, connectionState: 'connected', timestamp: Date.now() - 15000 },
+                    { rtt: 200, packetLoss: 3, connectionState: 'connected', timestamp: Date.now() - 10000 },
+                    { rtt: 250, packetLoss: 4, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 300, packetLoss: 5, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(typeof analysis).toBe('object');
+                expect(typeof analysis.needsOptimization).toBe('boolean');
+                expect(typeof analysis.trend).toBe('string');
+                expect(Array.isArray(analysis.recommendations)).toBe(true);
+                expect(typeof analysis.metrics).toBe('object');
+                
+                // Should detect degrading trend
+                expect(analysis.trend).toBe('degrading');
+                expect(analysis.needsOptimization).toBe(true);
+                expect(analysis.recommendations.length).toBeGreaterThan(0);
+            });
+            
+            test('should detect stable connection trends', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 105, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 15000 },
+                    { rtt: 95, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 10000 },
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 98, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.trend).toBe('stable');
+                expect(analysis.needsOptimization).toBe(false);
+                expect(analysis.recommendations.length).toBe(0);
+            });
+            
+            test('should detect improving connection trends', () => {
+                const mockHistory = [
+                    { rtt: 300, packetLoss: 5, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 250, packetLoss: 4, connectionState: 'connected', timestamp: Date.now() - 15000 },
+                    { rtt: 200, packetLoss: 3, connectionState: 'connected', timestamp: Date.now() - 10000 },
+                    { rtt: 150, packetLoss: 2, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.trend).toBe('improving');
+                expect(analysis.needsOptimization).toBe(false);
+            });
+            
+            test('should detect connection instability', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 150, packetLoss: 2, connectionState: 'connecting', timestamp: Date.now() - 15000 },
+                    { rtt: 200, packetLoss: 3, connectionState: 'failed', timestamp: Date.now() - 10000 },
+                    { rtt: 250, packetLoss: 4, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 300, packetLoss: 5, connectionState: 'disconnected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.metrics.connectionStability).toBe('unstable');
+                expect(analysis.needsOptimization).toBe(true);
+                expect(analysis.recommendations.some(r => r.includes('instability'))).toBe(true);
+            });
+            
+            test('should handle insufficient history data', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.needsOptimization).toBe(false);
+                expect(analysis.trend).toBe('stable');
+                expect(analysis.recommendations.length).toBe(0);
+            });
+            
+            test('should maintain connection quality history', async () => {
+                // Clear any existing history
+                window.connectionQualityHistory = [];
+                
+                // Mock connection with stats
+                const mockConnection = {
+                    peerConnection: {
+                        getStats: () => Promise.resolve(new Map([
+                            ['candidate-pair-1', {
+                                type: 'candidate-pair',
+                                state: 'succeeded',
+                                currentRoundTripTime: 0.1,
+                                availableOutgoingBitrate: 1000000
+                            }],
+                            ['inbound-rtp-1', {
+                                type: 'inbound-rtp',
+                                packetsLost: 5,
+                                jitter: 0.02
+                            }]
+                        ])),
+                        connectionState: 'connected',
+                        iceConnectionState: 'connected',
+                        iceGatheringState: 'complete'
+                    }
+                };
+                
+                window.connection = mockConnection;
+                
+                await updateConnectionQuality();
+                
+                expect(Array.isArray(window.connectionQualityHistory)).toBe(true);
+                expect(window.connectionQualityHistory.length).toBe(1);
+                
+                const qualityData = window.connectionQualityHistory[0];
+                expect(typeof qualityData.rtt).toBe('number');
+                expect(typeof qualityData.timestamp).toBe('number');
+                expect(qualityData.connectionState).toBe('connected');
+            });
+            
             test('should show connection quality in UI', () => {
                 const qualityContainer = document.getElementById('connection-quality');
                 const qualityInfo = document.getElementById('quality-info');
@@ -5419,6 +5548,211 @@
                 expect(() => updateConnectionQuality()).not.toThrow();
                 expect(() => startPerformanceMonitoring()).not.toThrow();
                 expect(() => stopPerformanceMonitoring()).not.toThrow();
+            });
+            
+            test('should limit connection quality history size', async () => {
+                // Clear existing history
+                window.connectionQualityHistory = [];
+                
+                // Mock connection
+                const mockConnection = {
+                    peerConnection: {
+                        getStats: () => Promise.resolve(new Map()),
+                        connectionState: 'connected',
+                        iceConnectionState: 'connected',
+                        iceGatheringState: 'complete'
+                    }
+                };
+                
+                window.connection = mockConnection;
+                
+                // Add 25 measurements (more than the 20 limit)
+                for (let i = 0; i < 25; i++) {
+                    await updateConnectionQuality();
+                }
+                
+                expect(window.connectionQualityHistory.length).toBeLessThanOrEqual(20);
+            });
+        });
+        
+        describe('ICE Server Pool Adaptive Optimization Tests', () => {
+            let testPool;
+            
+            test('should have adaptive optimization methods defined', () => {
+                const pool = new ICEServerPool();
+                expect(typeof pool.getCurrentTier).toBe('function');
+                expect(typeof pool.setCurrentTier).toBe('function');
+                expect(typeof pool.getNextTierConfiguration).toBe('function');
+                expect(typeof pool.getBestAvailableTier).toBe('function');
+                expect(typeof pool.getTierInfo).toBe('function');
+            });
+            
+            test('should track current tier correctly', () => {
+                const pool = new ICEServerPool();
+                expect(pool.getCurrentTier()).toBe(1);
+                
+                pool.setCurrentTier(2);
+                expect(pool.getCurrentTier()).toBe(2);
+                
+                pool.setCurrentTier(3);
+                expect(pool.getCurrentTier()).toBe(3);
+                
+                // Should not set invalid tiers
+                pool.setCurrentTier(5);
+                expect(pool.getCurrentTier()).toBe(3);
+                
+                pool.setCurrentTier(0);
+                expect(pool.getCurrentTier()).toBe(3);
+            });
+            
+            test('should get next tier configuration for optimization', () => {
+                const pool = new ICEServerPool();
+                const nextConfig = pool.getNextTierConfiguration(1);
+                
+                expect(nextConfig).not.toBeNull();
+                expect(typeof nextConfig).toBe('object');
+                expect(nextConfig.tier).toBe(2);
+                expect(Array.isArray(nextConfig.iceServers)).toBe(true);
+                expect(nextConfig.iceServers.length).toBeGreaterThan(0);
+                expect(pool.getCurrentTier()).toBe(2);
+            });
+            
+            test('should return null when no next tier available', () => {
+                const pool = new ICEServerPool();
+                const nextConfig = pool.getNextTierConfiguration(4);
+                expect(nextConfig).toBeNull();
+            });
+            
+            test('should get tier information for diagnostics', () => {
+                const pool = new ICEServerPool();
+                const tierInfo = pool.getTierInfo(1);
+                
+                expect(tierInfo).not.toBeNull();
+                expect(typeof tierInfo).toBe('object');
+                expect(tierInfo.tier).toBe(1);
+                expect(typeof tierInfo.name).toBe('string');
+                expect(typeof tierInfo.description).toBe('string');
+                expect(typeof tierInfo.serverCount).toBe('number');
+                expect(typeof tierInfo.hasSTUN).toBe('boolean');
+                expect(typeof tierInfo.hasTURN).toBe('boolean');
+            });
+            
+            test('should return null for invalid tier info request', () => {
+                const pool = new ICEServerPool();
+                const tierInfo = pool.getTierInfo(99);
+                expect(tierInfo).toBeNull();
+            });
+        });
+        
+        describe('Adaptive Optimization Integration Tests', () => {
+            test('should have adaptive optimization functions defined', () => {
+                expect(typeof analyzeConnectionQualityTrends).toBe('function');
+                expect(typeof triggerAdaptiveOptimization).toBe('function');
+                expect(typeof attemptConnectionOptimization).toBe('function');
+                expect(typeof reestablishConnection).toBe('function');
+                expect(typeof checkConnectionStability).toBe('function');
+            });
+            
+            test('should analyze connection quality trends correctly', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 150, packetLoss: 2, connectionState: 'connected', timestamp: Date.now() - 15000 },
+                    { rtt: 200, packetLoss: 3, connectionState: 'connected', timestamp: Date.now() - 10000 },
+                    { rtt: 250, packetLoss: 4, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 300, packetLoss: 5, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(typeof analysis).toBe('object');
+                expect(typeof analysis.needsOptimization).toBe('boolean');
+                expect(typeof analysis.trend).toBe('string');
+                expect(Array.isArray(analysis.recommendations)).toBe(true);
+                expect(typeof analysis.metrics).toBe('object');
+                
+                // Should detect degrading trend
+                expect(analysis.trend).toBe('degrading');
+                expect(analysis.needsOptimization).toBe(true);
+                expect(analysis.recommendations.length).toBeGreaterThan(0);
+            });
+            
+            test('should detect stable connection trends', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 105, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 15000 },
+                    { rtt: 95, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 10000 },
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 98, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.trend).toBe('stable');
+                expect(analysis.needsOptimization).toBe(false);
+                expect(analysis.recommendations.length).toBe(0);
+            });
+            
+            test('should detect connection instability', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() - 20000 },
+                    { rtt: 150, packetLoss: 2, connectionState: 'connecting', timestamp: Date.now() - 15000 },
+                    { rtt: 200, packetLoss: 3, connectionState: 'failed', timestamp: Date.now() - 10000 },
+                    { rtt: 250, packetLoss: 4, connectionState: 'connected', timestamp: Date.now() - 5000 },
+                    { rtt: 300, packetLoss: 5, connectionState: 'disconnected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.metrics.connectionStability).toBe('unstable');
+                expect(analysis.needsOptimization).toBe(true);
+                expect(analysis.recommendations.some(r => r.includes('instability'))).toBe(true);
+            });
+            
+            test('should handle insufficient history data', () => {
+                const mockHistory = [
+                    { rtt: 100, packetLoss: 1, connectionState: 'connected', timestamp: Date.now() }
+                ];
+                
+                const analysis = analyzeConnectionQualityTrends(mockHistory);
+                
+                expect(analysis.needsOptimization).toBe(false);
+                expect(analysis.trend).toBe('stable');
+                expect(analysis.recommendations.length).toBe(0);
+            });
+            
+            test('should not trigger optimization without connection manager', async () => {
+                const mockAnalysis = {
+                    needsOptimization: true,
+                    metrics: { avgRtt: 400, packetLossRate: 5 }
+                };
+                
+                const originalManager = window.connectionManager;
+                const originalPool = window.iceServerPool;
+                
+                window.connectionManager = null;
+                window.iceServerPool = null;
+                
+                // Should not throw error
+                expect(() => triggerAdaptiveOptimization(mockAnalysis)).not.toThrow();
+                
+                // Restore original values
+                window.connectionManager = originalManager;
+                window.iceServerPool = originalPool;
+            });
+            
+            test('should check connection stability correctly', () => {
+                const mockQualityData = {
+                    rtt: 600,
+                    connectionState: 'failed',
+                    iceConnectionState: 'failed'
+                };
+                
+                const mockAnalysis = {
+                    metrics: { packetLossRate: 15, connectionStability: 'unstable' }
+                };
+                
+                // Should not throw error
+                expect(() => checkConnectionStability(mockQualityData, mockAnalysis)).not.toThrow();
             });
         });
         
@@ -7336,6 +7670,84 @@
                     config.error = null;
                 }
             }
+            
+            /**
+             * Get the current tier being used
+             * @returns {number} Current tier number
+             */
+            getCurrentTier() {
+                return this.currentTier;
+            }
+            
+            /**
+             * Set the current tier
+             * @param {number} tier - Tier number to set as current
+             */
+            setCurrentTier(tier) {
+                if (tier >= 1 && tier <= 4) {
+                    this.currentTier = tier;
+                }
+            }
+            
+            /**
+             * Get configuration for the next tier for adaptive optimization
+             * @param {number} currentTier - Current tier number
+             * @returns {Object|null} Next tier configuration or null if no next tier
+             */
+            getNextTierConfiguration(currentTier) {
+                const nextTier = this.getNextTier(currentTier);
+                if (!nextTier) {
+                    return null;
+                }
+                
+                const config = this.getConfigurationForTier(nextTier);
+                this.setCurrentTier(nextTier);
+                
+                return config;
+            }
+            
+            /**
+             * Get the best available tier based on health status
+             * @returns {Object} Best tier configuration
+             */
+            getBestAvailableTier() {
+                // Check tiers in order of preference (1 is best)
+                for (let tier = 1; tier <= 3; tier++) {
+                    const tierConfig = this.serverTiers.get(tier);
+                    if (tierConfig.healthStatus === 'healthy' || tierConfig.healthStatus === 'unknown') {
+                        this.setCurrentTier(tier);
+                        return this.getConfigurationForTier(tier);
+                    }
+                }
+                
+                // If no healthy tiers found, return default
+                this.setCurrentTier(1);
+                return this.getDefaultConfiguration();
+            }
+            
+            /**
+             * Get tier information for diagnostics
+             * @param {number} tier - Tier number
+             * @returns {Object} Tier information
+             */
+            getTierInfo(tier) {
+                const tierConfig = this.serverTiers.get(tier);
+                if (!tierConfig) {
+                    return null;
+                }
+                
+                return {
+                    tier,
+                    name: tierConfig.name,
+                    description: tierConfig.description,
+                    healthStatus: tierConfig.healthStatus,
+                    lastHealthCheck: tierConfig.lastHealthCheck,
+                    responseTime: tierConfig.responseTime,
+                    serverCount: tierConfig.servers.length,
+                    hasSTUN: tierConfig.servers.some(s => s.type === 'stun'),
+                    hasTURN: tierConfig.servers.some(s => s.type === 'turn')
+                };
+            }
         }
         
         // Global ICE server pool instance
@@ -7602,34 +8014,76 @@
         };
         
         /**
-         * Updates connection quality indicators
+         * Enhanced connection quality monitoring with adaptive optimization
+         * Implements Requirements 3.4, 4.2, 4.3 from the WebRTC NAT traversal improvement spec
          */
         const updateConnectionQuality = async () => {
             if (!connection?.peerConnection) return;
             
             try {
                 const stats = await connection.peerConnection.getStats();
+                const currentTime = Date.now();
+                
                 let qualityData = {
                     rtt: null,
                     bandwidth: null,
                     packetLoss: null,
-                    jitter: null
+                    jitter: null,
+                    timestamp: currentTime,
+                    connectionState: connection.peerConnection.connectionState,
+                    iceConnectionState: connection.peerConnection.iceConnectionState,
+                    iceGatheringState: connection.peerConnection.iceGatheringState
                 };
+                
+                // Enhanced stats parsing with more comprehensive data collection
+                let inboundStats = null;
+                let outboundStats = null;
+                let candidatePairStats = null;
                 
                 for (const report of stats.values()) {
                     if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        candidatePairStats = report;
                         qualityData.rtt = report.currentRoundTripTime ? Math.round(report.currentRoundTripTime * 1000) : null;
                         qualityData.bandwidth = report.availableOutgoingBitrate ? Math.round(report.availableOutgoingBitrate / 1000) : null;
                     }
                     
-                    if (report.type === 'inbound-rtp' && report.mediaType === 'audio') {
+                    if (report.type === 'inbound-rtp') {
+                        inboundStats = report;
                         qualityData.packetLoss = report.packetsLost || 0;
                         qualityData.jitter = report.jitter ? Math.round(report.jitter * 1000) : null;
                     }
+                    
+                    if (report.type === 'outbound-rtp') {
+                        outboundStats = report;
+                    }
                 }
                 
+                // Store historical data for trend analysis
+                if (!window.connectionQualityHistory) {
+                    window.connectionQualityHistory = [];
+                }
+                
+                window.connectionQualityHistory.push(qualityData);
+                
+                // Keep only last 20 measurements (100 seconds of history)
+                if (window.connectionQualityHistory.length > 20) {
+                    window.connectionQualityHistory.shift();
+                }
+                
+                // Analyze quality trends and trigger adaptive optimization
+                const qualityAnalysis = analyzeConnectionQualityTrends(window.connectionQualityHistory);
+                
+                // Trigger adaptive optimization if quality is degrading
+                if (qualityAnalysis.needsOptimization && window.connectionManager) {
+                    await triggerAdaptiveOptimization(qualityAnalysis);
+                }
+                
+                // Check for connection stability issues
+                checkConnectionStability(qualityData, qualityAnalysis);
+                
                 performanceMetrics.connectionQuality = qualityData;
-                showConnectionQuality(qualityData);
+                performanceMetrics.qualityAnalysis = qualityAnalysis;
+                showConnectionQuality(qualityData, qualityAnalysis);
                 
             } catch (error) {
                 console.warn('Could not get connection quality stats:', error);
@@ -7637,9 +8091,241 @@
         };
         
         /**
-         * Shows connection quality indicators in the UI
+         * Analyzes connection quality trends for adaptive optimization
+         * @param {Array} history - Array of quality measurements
+         * @returns {Object} Analysis results with optimization recommendations
          */
-        const showConnectionQuality = (qualityData) => {
+        const analyzeConnectionQualityTrends = (history) => {
+            if (history.length < 3) {
+                return { needsOptimization: false, trend: 'stable', recommendations: [] };
+            }
+            
+            const recent = history.slice(-5); // Last 5 measurements
+            const analysis = {
+                needsOptimization: false,
+                trend: 'stable',
+                recommendations: [],
+                metrics: {
+                    avgRtt: 0,
+                    rttTrend: 'stable',
+                    packetLossRate: 0,
+                    connectionStability: 'stable'
+                }
+            };
+            
+            // Calculate average RTT and trend
+            const rttValues = recent.filter(r => r.rtt !== null).map(r => r.rtt);
+            if (rttValues.length > 0) {
+                analysis.metrics.avgRtt = rttValues.reduce((a, b) => a + b, 0) / rttValues.length;
+                
+                // Detect RTT trend
+                if (rttValues.length >= 3) {
+                    const firstHalf = rttValues.slice(0, Math.floor(rttValues.length / 2));
+                    const secondHalf = rttValues.slice(Math.floor(rttValues.length / 2));
+                    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+                    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+                    
+                    if (secondAvg > firstAvg * 1.5) {
+                        analysis.metrics.rttTrend = 'degrading';
+                        analysis.needsOptimization = true;
+                        analysis.recommendations.push('High latency detected - consider ICE server optimization');
+                    } else if (secondAvg < firstAvg * 0.8) {
+                        analysis.metrics.rttTrend = 'improving';
+                    }
+                }
+            }
+            
+            // Analyze packet loss
+            const lossValues = recent.filter(r => r.packetLoss !== null).map(r => r.packetLoss);
+            if (lossValues.length > 0) {
+                const totalLoss = lossValues.reduce((a, b) => a + b, 0);
+                analysis.metrics.packetLossRate = totalLoss / lossValues.length;
+                
+                if (analysis.metrics.packetLossRate > 5) {
+                    analysis.needsOptimization = true;
+                    analysis.recommendations.push('High packet loss detected - connection may need re-establishment');
+                }
+            }
+            
+            // Check connection state stability
+            const connectionStates = recent.map(r => r.connectionState);
+            const uniqueStates = [...new Set(connectionStates)];
+            if (uniqueStates.length > 1 || uniqueStates.includes('failed') || uniqueStates.includes('disconnected')) {
+                analysis.metrics.connectionStability = 'unstable';
+                analysis.needsOptimization = true;
+                analysis.recommendations.push('Connection instability detected - may need re-establishment');
+            }
+            
+            // Overall trend assessment
+            if (analysis.needsOptimization) {
+                analysis.trend = 'degrading';
+            } else if (analysis.metrics.rttTrend === 'improving') {
+                analysis.trend = 'improving';
+            }
+            
+            return analysis;
+        };
+        
+        /**
+         * Triggers adaptive optimization based on quality analysis
+         * @param {Object} qualityAnalysis - Results from quality trend analysis
+         */
+        const triggerAdaptiveOptimization = async (qualityAnalysis) => {
+            if (!window.connectionManager || !window.iceServerPool) return;
+            
+            console.log('🔄 Triggering adaptive optimization:', qualityAnalysis);
+            addSystemMessage('🔄 Optimizing connection based on quality analysis...');
+            
+            try {
+                // Check if we should try different ICE servers
+                if (qualityAnalysis.metrics.avgRtt > 300 || qualityAnalysis.metrics.packetLossRate > 3) {
+                    console.log('📡 Attempting ICE server re-selection for better performance');
+                    addSystemMessage('📡 Trying alternative servers for better performance...');
+                    
+                    // Get next tier of ICE servers
+                    const currentTier = window.iceServerPool.getCurrentTier();
+                    const nextConfig = window.iceServerPool.getNextTierConfiguration(currentTier);
+                    
+                    if (nextConfig && window.connection) {
+                        // Store current connection info
+                        const currentPeerId = window.connection.peer;
+                        
+                        // Attempt to re-establish with better servers
+                        await attemptConnectionOptimization(currentPeerId, nextConfig);
+                    }
+                }
+                
+                // Check if connection needs complete re-establishment
+                if (qualityAnalysis.metrics.connectionStability === 'unstable') {
+                    console.log('🔄 Connection unstable - attempting re-establishment');
+                    addSystemMessage('🔄 Connection unstable - re-establishing connection...');
+                    
+                    if (window.connection && window.connection.peer) {
+                        const peerId = window.connection.peer;
+                        await reestablishConnection(peerId);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error during adaptive optimization:', error);
+                addSystemMessage('⚠️ Optimization attempt failed - continuing with current connection');
+            }
+        };
+        
+        /**
+         * Attempts to optimize connection with different ICE server configuration
+         * @param {string} peerId - Target peer ID
+         * @param {Object} iceConfig - New ICE server configuration
+         */
+        const attemptConnectionOptimization = async (peerId, iceConfig) => {
+            if (!window.connectionManager) return;
+            
+            try {
+                // Create a test connection with new configuration
+                const testConnection = await window.connectionManager.establishConnection(peerId, iceConfig);
+                
+                if (testConnection && testConnection.open) {
+                    // If test connection is better, switch to it
+                    const oldConnection = window.connection;
+                    window.connection = testConnection;
+                    
+                    // Clean up old connection
+                    if (oldConnection) {
+                        oldConnection.close();
+                    }
+                    
+                    addSystemMessage('✅ Connection optimized with better servers');
+                    console.log('✅ Successfully optimized connection');
+                    
+                    // Restart monitoring with new connection
+                    startPerformanceMonitoring();
+                } else {
+                    addSystemMessage('⚠️ Optimization attempt unsuccessful - keeping current connection');
+                }
+                
+            } catch (error) {
+                console.error('Connection optimization failed:', error);
+                addSystemMessage('⚠️ Could not optimize connection - continuing with current setup');
+            }
+        };
+        
+        /**
+         * Re-establishes connection when stability issues are detected
+         * @param {string} peerId - Target peer ID
+         */
+        const reestablishConnection = async (peerId) => {
+            if (!window.connectionManager) return;
+            
+            try {
+                addSystemMessage('🔄 Re-establishing connection due to stability issues...');
+                
+                // Close current connection
+                if (window.connection) {
+                    window.connection.close();
+                    window.connection = null;
+                }
+                
+                // Stop current monitoring
+                stopPerformanceMonitoring();
+                
+                // Wait a moment before re-establishing
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Re-establish connection
+                const newConnection = await window.connectionManager.establishConnection(peerId);
+                
+                if (newConnection && newConnection.open) {
+                    window.connection = newConnection;
+                    addSystemMessage('✅ Connection re-established successfully');
+                    
+                    // Restart monitoring
+                    startPerformanceMonitoring();
+                } else {
+                    addSystemMessage('❌ Failed to re-establish connection');
+                }
+                
+            } catch (error) {
+                console.error('Connection re-establishment failed:', error);
+                addSystemMessage('❌ Could not re-establish connection');
+            }
+        };
+        
+        /**
+         * Checks connection stability and triggers alerts if needed
+         * @param {Object} qualityData - Current quality measurements
+         * @param {Object} qualityAnalysis - Quality trend analysis
+         */
+        const checkConnectionStability = (qualityData, qualityAnalysis) => {
+            // Check for critical connection states
+            if (qualityData.connectionState === 'failed' || qualityData.iceConnectionState === 'failed') {
+                addSystemMessage('❌ Connection failure detected - attempting recovery...');
+                
+                // Trigger immediate re-establishment
+                if (window.connection && window.connection.peer) {
+                    setTimeout(() => reestablishConnection(window.connection.peer), 1000);
+                }
+            }
+            
+            // Check for degraded performance
+            if (qualityData.rtt > 500 || qualityAnalysis.metrics.packetLossRate > 10) {
+                addSystemMessage('⚠️ Poor connection quality detected - monitoring for improvement...');
+            }
+            
+            // Log stability metrics for debugging
+            if (qualityAnalysis.metrics.connectionStability === 'unstable') {
+                console.warn('Connection stability warning:', {
+                    rtt: qualityData.rtt,
+                    packetLoss: qualityData.packetLoss,
+                    connectionState: qualityData.connectionState,
+                    iceConnectionState: qualityData.iceConnectionState
+                });
+            }
+        };
+        
+        /**
+         * Enhanced connection quality display with trend information
+         */
+        const showConnectionQuality = (qualityData, qualityAnalysis = null) => {
             const qualityContainer = document.getElementById('connection-quality');
             const qualityInfo = document.getElementById('quality-info');
             
@@ -7688,11 +8374,79 @@
                 `;
             }
             
-            // Add overall quality indicator
+            // Add jitter information if available
+            if (qualityData.jitter !== null) {
+                const jitterClass = qualityData.jitter > 50 ? 'metric-poor' : 
+                                   qualityData.jitter > 20 ? 'metric-warning' : 'metric-good';
+                if (jitterClass !== 'metric-good' && overallQuality !== 'poor') {
+                    overallQuality = jitterClass === 'metric-warning' ? 'good' : 'poor';
+                }
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Jitter:</span>
+                        <span class="metric-value ${jitterClass}">${qualityData.jitter}ms</span>
+                    </div>
+                `;
+            }
+            
+            // Add connection state information
+            if (qualityData.connectionState) {
+                const stateClass = qualityData.connectionState === 'connected' ? 'metric-good' :
+                                  qualityData.connectionState === 'connecting' ? 'metric-warning' : 'metric-poor';
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Connection State:</span>
+                        <span class="metric-value ${stateClass}">${qualityData.connectionState}</span>
+                    </div>
+                `;
+            }
+            
+            // Add trend analysis information if available
+            if (qualityAnalysis) {
+                const trendIcon = qualityAnalysis.trend === 'improving' ? '📈' :
+                                 qualityAnalysis.trend === 'degrading' ? '📉' : '➡️';
+                const trendClass = qualityAnalysis.trend === 'improving' ? 'metric-good' :
+                                  qualityAnalysis.trend === 'degrading' ? 'metric-poor' : 'metric-warning';
+                
+                html += `
+                    <div class="metric-item">
+                        <span>Quality Trend:</span>
+                        <span class="metric-value ${trendClass}">${trendIcon} ${qualityAnalysis.trend}</span>
+                    </div>
+                `;
+                
+                // Show optimization status if needed
+                if (qualityAnalysis.needsOptimization) {
+                    html += `
+                        <div class="metric-item" style="background: #fff3cd; padding: 4px; border-radius: 3px; margin-top: 4px;">
+                            <span style="color: #856404; font-size: 11px;">🔄 Adaptive optimization active</span>
+                        </div>
+                    `;
+                }
+                
+                // Show recommendations if any
+                if (qualityAnalysis.recommendations && qualityAnalysis.recommendations.length > 0) {
+                    html += `
+                        <div style="margin-top: 8px; padding: 6px; background: #e8f4fd; border-radius: 4px; border-left: 3px solid #17a2b8;">
+                            <div style="font-size: 11px; color: #0c5460; font-weight: bold; margin-bottom: 4px;">💡 Optimization Insights:</div>
+                            ${qualityAnalysis.recommendations.map(rec => 
+                                `<div style="font-size: 10px; color: #0c5460; margin-bottom: 2px;">• ${rec}</div>`
+                            ).join('')}
+                        </div>
+                    `;
+                }
+            }
+            
+            // Add overall quality indicator with enhanced information
+            const qualityIcon = overallQuality === 'excellent' ? '🟢' :
+                               overallQuality === 'good' ? '🟡' : '🔴';
+            
             html = `
-                <div class="metric-item">
+                <div class="metric-item" style="border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-bottom: 8px;">
                     <span><span class="quality-indicator quality-${overallQuality}"></span>Overall Quality:</span>
-                    <span class="metric-value">${overallQuality.charAt(0).toUpperCase() + overallQuality.slice(1)}</span>
+                    <span class="metric-value">${qualityIcon} ${overallQuality.charAt(0).toUpperCase() + overallQuality.slice(1)}</span>
                 </div>
             ` + html;
             
