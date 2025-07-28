@@ -56,3 +56,12 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Puppeteer generated files
+*.png
+*.pdf
+deployment_screenshot.*
+deployment_test_*
+deployment_validation.*
+final_test.*
+post_deploy_test.*
