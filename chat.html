@@ -707,6 +707,36 @@
             background-color: #007bff;
             width: 0%;
             transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill.progress-starting {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        .progress-fill.progress-connecting {
+            background: linear-gradient(90deg, #17a2b8, #007bff);
+        }
+        
+        .progress-fill.progress-finalizing {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: progress-shimmer 2s infinite;
+        }
+        
+        @keyframes progress-shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
         
         .network-diagnostics {
@@ -848,6 +878,82 @@
             border-radius: var(--border-radius-sm);
             font-size: var(--font-size-xs);
             margin-top: var(--spacing-xs);
+        }
+        
+        /* Enhanced Troubleshooting Steps Styles */
+        .troubleshooting-steps {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .troubleshooting-steps h4 {
+            margin: 0 0 10px 0;
+            color: #0c5460;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .troubleshooting-steps h4::before {
+            content: '🔧';
+            font-size: 16px;
+        }
+        
+        .troubleshooting-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .troubleshooting-step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-icon {
+            font-size: 18px;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        
+        .step-description {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        
+        .step-action {
+            font-size: 11px;
+            color: #007bff;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .step-action:hover {
+            color: #0056b3;
         }
     </style>
 </head>
@@ -4757,6 +4863,221 @@
             });
         });
         
+        describe('Enhanced Connection Progress Tests', () => {
+            test('should show progress with time estimation', () => {
+                const progressContainer = document.getElementById('connection-progress');
+                const progressFill = document.getElementById('progress-fill');
+                const progressText = document.getElementById('progress-text');
+                
+                showConnectionProgress(50, 'Connecting', 10);
+                
+                expect(progressContainer.style.display).toBe('block');
+                expect(progressFill.style.width).toBe('50%');
+                expect(progressText.textContent).toBe('Connecting (10s remaining)');
+            });
+            
+            test('should apply correct progress stage classes', () => {
+                const progressFill = document.getElementById('progress-fill');
+                
+                // Test starting stage
+                showConnectionProgress(20, 'Starting');
+                expect(progressFill.classList.contains('progress-starting')).toBe(true);
+                
+                // Test connecting stage
+                showConnectionProgress(50, 'Connecting');
+                expect(progressFill.classList.contains('progress-connecting')).toBe(true);
+                
+                // Test finalizing stage
+                showConnectionProgress(80, 'Finalizing');
+                expect(progressFill.classList.contains('progress-finalizing')).toBe(true);
+            });
+            
+            test('should handle progress without time estimation', () => {
+                const progressText = document.getElementById('progress-text');
+                
+                showConnectionProgress(75, 'Test Progress', null);
+                expect(progressText.textContent).toBe('Test Progress');
+                
+                showConnectionProgress(75, 'Test Progress');
+                expect(progressText.textContent).toBe('Test Progress');
+            });
+        });
+        
+        describe('Connection Status Management Tests', () => {
+            test('should update status with enhanced details', () => {
+                const indicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                
+                updateConnectionStatus('connecting', 'Connecting', {
+                    attempt: 2,
+                    maxAttempts: 3,
+                    tier: 1
+                });
+                
+                expect(indicator.classList.contains('status-connecting')).toBe(true);
+                expect(statusText.textContent).toBe('Connecting (Attempt 2/3) [Tier 1]');
+            });
+            
+            test('should update retry button text with remaining attempts', () => {
+                const retryBtn = document.getElementById('retry-btn');
+                retryCount = 1;
+                maxRetries = 3;
+                
+                updateConnectionStatus('error', 'Connection Failed');
+                
+                expect(retryBtn.style.display).toBe('inline-block');
+                expect(retryBtn.textContent).toBe('Retry (2 left)');
+            });
+            
+            test('should prevent retry when specified', () => {
+                const retryBtn = document.getElementById('retry-btn');
+                
+                updateConnectionStatus('error', 'Fatal Error', { preventRetry: true });
+                
+                expect(retryBtn.style.display).toBe('none');
+            });
+        });
+        
+        describe('Troubleshooting Steps Tests', () => {
+            test('should have troubleshooting functions defined', () => {
+                expect(typeof showTroubleshootingSteps).toBe('function');
+                expect(typeof hideTroubleshootingSteps).toBe('function');
+                expect(typeof createTroubleshootingContainer).toBe('function');
+            });
+            
+            test('should create troubleshooting container if not exists', () => {
+                // Remove existing container if any
+                const existing = document.getElementById('troubleshooting-steps');
+                if (existing) existing.remove();
+                
+                const testSteps = [
+                    {
+                        icon: '🔍',
+                        title: 'Test Step',
+                        description: 'Test description',
+                        action: 'Test action'
+                    }
+                ];
+                
+                showTroubleshootingSteps(testSteps);
+                
+                const container = document.getElementById('troubleshooting-steps');
+                expect(container).not.toBeNull();
+                expect(container.style.display).toBe('block');
+            });
+            
+            test('should display troubleshooting steps correctly', () => {
+                const testSteps = [
+                    {
+                        icon: '🔍',
+                        title: 'Verify Peer ID',
+                        description: 'Check for typos',
+                        action: 'Copy and paste'
+                    },
+                    {
+                        icon: '📶',
+                        title: 'Check Connection',
+                        description: 'Verify internet',
+                        action: null
+                    }
+                ];
+                
+                showTroubleshootingSteps(testSteps);
+                
+                const troubleshootingInfo = document.getElementById('troubleshooting-info');
+                expect(troubleshootingInfo.innerHTML).toContain('Verify Peer ID');
+                expect(troubleshootingInfo.innerHTML).toContain('Check Connection');
+                expect(troubleshootingInfo.innerHTML).toContain('Copy and paste');
+            });
+            
+            test('should hide troubleshooting steps', () => {
+                showTroubleshootingSteps([{ icon: '🔍', title: 'Test', description: 'Test' }]);
+                
+                hideTroubleshootingSteps();
+                
+                const container = document.getElementById('troubleshooting-steps');
+                expect(container.style.display).toBe('none');
+            });
+        });
+        
+        describe('Enhanced Error Configuration Tests', () => {
+            test('should have getErrorConfig function defined', () => {
+                expect(typeof getErrorConfig).toBe('function');
+            });
+            
+            test('should return correct config for peer-unavailable error', () => {
+                const error = { type: 'peer-unavailable', message: 'Peer not found' };
+                const config = getErrorConfig(error);
+                
+                expect(config.status).toBe('Peer not found');
+                expect(config.message).toContain('Peer not found or unavailable');
+                expect(config.showDiagnostics).toBe(true);
+                expect(Array.isArray(config.troubleshooting)).toBe(true);
+                expect(config.troubleshooting.length).toBeGreaterThan(0);
+            });
+            
+            test('should return correct config for network error', () => {
+                const error = { type: 'network', message: 'Network issue' };
+                const config = getErrorConfig(error);
+                
+                expect(config.status).toBe('Network issue');
+                expect(config.message).toContain('Network connectivity issue');
+                expect(config.troubleshooting.some(step => step.title.includes('Internet'))).toBe(true);
+            });
+            
+            test('should return default config for unknown error', () => {
+                const error = { type: 'unknown-error', message: 'Something went wrong' };
+                const config = getErrorConfig(error);
+                
+                expect(config.status).toBe('Unknown error');
+                expect(config.message).toContain('Something went wrong');
+                expect(config.troubleshooting.length).toBeGreaterThan(0);
+            });
+        });
+        
+        describe('Connection Progress Monitoring Tests', () => {
+            test('should have monitorConnectionProgress function defined', () => {
+                expect(typeof monitorConnectionProgress).toBe('function');
+            });
+            
+            asyncTest('should monitor connection progress with stages', () => {
+                const mockConnection = {
+                    open: false,
+                    on: () => {},
+                    close: () => {}
+                };
+                
+                // Start monitoring
+                monitorConnectionProgress(mockConnection);
+                
+                // Check initial progress
+                const progressText = document.getElementById('progress-text');
+                expect(progressText.textContent).toContain('Establishing peer connection');
+                
+                // Simulate connection opening after delay
+                setTimeout(() => {
+                    mockConnection.open = true;
+                }, 1000);
+                
+                // Check final state after connection opens
+                setTimeout(() => {
+                    expect(progressText.textContent).toContain('Connected!');
+                }, 1500);
+            }, 2000);
+            
+            test('should update progress with time estimates', () => {
+                const mockConnection = { open: false, on: () => {}, close: () => {} };
+                
+                monitorConnectionProgress(mockConnection);
+                
+                // Check that progress text includes time estimation
+                setTimeout(() => {
+                    const progressText = document.getElementById('progress-text');
+                    expect(progressText.textContent).toMatch(/\d+s remaining/);
+                }, 100);
+            });
+        });
+        
         describe('Network Diagnostics Tests', () => {
             test('should have runNetworkDiagnostics function defined', () => {
                 expect(typeof runNetworkDiagnostics).toBe('function');
@@ -7300,11 +7621,12 @@
         // ===== CONNECTION STATUS MANAGEMENT =====
         
         /**
-         * Updates the connection status indicator and text
+         * Updates the connection status indicator and text with enhanced real-time feedback
          * @param {string} status - The status ('disconnected', 'connecting', 'connected', 'error')
          * @param {string} text - The status text to display
+         * @param {Object} details - Additional status details (optional)
          */
-        const updateConnectionStatus = (status, text) => {
+        const updateConnectionStatus = (status, text, details = {}) => {
             const indicator = document.getElementById('status-indicator');
             const statusText = document.getElementById('status-text');
             const retryBtn = document.getElementById('retry-btn');
@@ -7314,25 +7636,63 @@
             
             // Add appropriate status class
             indicator.classList.add(`status-${status}`);
-            statusText.textContent = text;
             
-            // Show/hide retry button
-            retryBtn.style.display = (status === 'error' && retryCount < maxRetries) ? 'inline-block' : 'none';
+            // Enhanced status text with additional details
+            let displayText = text;
+            if (details.attempt && details.maxAttempts) {
+                displayText += ` (Attempt ${details.attempt}/${details.maxAttempts})`;
+            }
+            if (details.tier) {
+                displayText += ` [Tier ${details.tier}]`;
+            }
+            statusText.textContent = displayText;
+            
+            // Show/hide retry button with enhanced logic
+            const showRetry = status === 'error' && 
+                             retryCount < maxRetries && 
+                             !details.preventRetry;
+            retryBtn.style.display = showRetry ? 'inline-block' : 'none';
+            
+            // Update retry button text based on context
+            if (showRetry) {
+                const remainingAttempts = maxRetries - retryCount;
+                retryBtn.textContent = `Retry (${remainingAttempts} left)`;
+            }
+            
+            // Log status change for debugging
+            console.log(`Connection status: ${status} - ${displayText}`, details);
         };
         
         /**
-         * Shows connection progress with animated progress bar
+         * Shows connection progress with animated progress bar and estimated time
          * @param {number} progress - Progress percentage (0-100)
          * @param {string} text - Progress text to display
+         * @param {number} estimatedTimeRemaining - Estimated time remaining in seconds (optional)
          */
-        const showConnectionProgress = (progress, text) => {
+        const showConnectionProgress = (progress, text, estimatedTimeRemaining = null) => {
             const progressContainer = document.getElementById('connection-progress');
             const progressFill = document.getElementById('progress-fill');
             const progressText = document.getElementById('progress-text');
             
             progressContainer.style.display = 'block';
             progressFill.style.width = `${progress}%`;
-            progressText.textContent = text;
+            
+            // Enhanced progress text with time estimation
+            let displayText = text;
+            if (estimatedTimeRemaining !== null && estimatedTimeRemaining > 0) {
+                displayText += ` (${Math.ceil(estimatedTimeRemaining)}s remaining)`;
+            }
+            progressText.textContent = displayText;
+            
+            // Add visual feedback for different progress stages
+            progressFill.className = 'progress-fill';
+            if (progress < 25) {
+                progressFill.classList.add('progress-starting');
+            } else if (progress < 75) {
+                progressFill.classList.add('progress-connecting');
+            } else {
+                progressFill.classList.add('progress-finalizing');
+            }
         };
         
         /**
@@ -7621,6 +7981,192 @@
         };
         
         /**
+         * Gets enhanced error configuration with troubleshooting steps
+         * @param {Object} error - The error object
+         * @returns {Object} Error configuration with message, diagnostics, and troubleshooting
+         */
+        const getErrorConfig = (error) => {
+            const errorConfigs = new Map([
+                ['peer-unavailable', {
+                    status: 'Peer not found',
+                    message: '🔍 Connection failed: Peer not found or unavailable',
+                    showDiagnostics: true,
+                    troubleshooting: [
+                        {
+                            icon: '🔍',
+                            title: 'Verify Peer ID',
+                            description: 'Double-check the peer ID for typos or extra spaces',
+                            action: 'Copy and paste the exact peer ID'
+                        },
+                        {
+                            icon: '👥',
+                            title: 'Check Peer Status',
+                            description: 'Ensure the other user is online and ready to connect',
+                            action: 'Ask them to refresh their page'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Refresh Connection',
+                            description: 'Both users should refresh their pages and try again',
+                            action: 'Press F5 or Ctrl+R to refresh'
+                        }
+                    ]
+                }],
+                ['network', {
+                    status: 'Network issue',
+                    message: '🌐 Connection failed: Network connectivity issue',
+                    showDiagnostics: true,
+                    troubleshooting: [
+                        {
+                            icon: '📶',
+                            title: 'Check Internet Connection',
+                            description: 'Verify you have a stable internet connection',
+                            action: 'Try loading other websites'
+                        },
+                        {
+                            icon: '🔥',
+                            title: 'Firewall Settings',
+                            description: 'Your firewall may be blocking WebRTC traffic',
+                            action: 'Try disabling firewall temporarily'
+                        },
+                        {
+                            icon: '🏢',
+                            title: 'Network Restrictions',
+                            description: 'Corporate/school networks often block P2P connections',
+                            action: 'Try using mobile hotspot or different network'
+                        }
+                    ]
+                }],
+                ['ice-connection-failed', {
+                    status: 'NAT traversal failed',
+                    message: '🧊 Connection failed: Unable to establish direct connection',
+                    showDiagnostics: true,
+                    troubleshooting: [
+                        {
+                            icon: '🌐',
+                            title: 'Try Different Network',
+                            description: 'Both peers may be behind restrictive NATs/firewalls',
+                            action: 'Use mobile hotspot or different WiFi'
+                        },
+                        {
+                            icon: '🔧',
+                            title: 'Router Configuration',
+                            description: 'Your router may be blocking P2P connections',
+                            action: 'Check router settings or contact IT support'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Retry Connection',
+                            description: 'Network conditions change - retry may succeed',
+                            action: 'Click retry button below'
+                        }
+                    ]
+                }],
+                ['timeout', {
+                    status: 'Connection timeout',
+                    message: '⏰ Connection timeout: Taking too long to establish connection',
+                    showDiagnostics: true,
+                    troubleshooting: [
+                        {
+                            icon: '📶',
+                            title: 'Check Connection Speed',
+                            description: 'Slow internet may cause connection timeouts',
+                            action: 'Test your internet speed'
+                        },
+                        {
+                            icon: '🌍',
+                            title: 'Geographic Distance',
+                            description: 'Long distances can increase connection time',
+                            action: 'Wait longer or try again'
+                        },
+                        {
+                            icon: '🔄',
+                            title: 'Retry with Patience',
+                            description: 'Some networks need more time to establish connections',
+                            action: 'Click retry and wait longer'
+                        }
+                    ]
+                }]
+            ]);
+            
+            return errorConfigs.get(error.type) || {
+                status: 'Unknown error',
+                message: `❌ Connection failed: ${error.message || 'Unknown error'}`,
+                showDiagnostics: true,
+                troubleshooting: [
+                    {
+                        icon: '🔄',
+                        title: 'Try Again',
+                        description: 'An unexpected error occurred',
+                        action: 'Refresh the page and try connecting again'
+                    },
+                    {
+                        icon: '🐛',
+                        title: 'Report Issue',
+                        description: 'If the problem persists, this may be a bug',
+                        action: 'Check browser console for error details'
+                    }
+                ]
+            };
+        };
+        
+        /**
+         * Shows troubleshooting steps to the user
+         * @param {Array} steps - Array of troubleshooting step objects
+         */
+        const showTroubleshootingSteps = (steps) => {
+            let troubleshootingContainer = document.getElementById('troubleshooting-steps');
+            
+            if (!troubleshootingContainer) {
+                createTroubleshootingContainer();
+                troubleshootingContainer = document.getElementById('troubleshooting-steps');
+            }
+            
+            const troubleshootingInfo = document.getElementById('troubleshooting-info');
+            
+            troubleshootingInfo.innerHTML = steps
+                .map(({ icon, title, description, action }) => `
+                    <div class="troubleshooting-step">
+                        <div class="step-icon">${icon}</div>
+                        <div class="step-content">
+                            <div class="step-title">${title}</div>
+                            <div class="step-description">${description}</div>
+                            ${action ? `<div class="step-action">${action}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            
+            troubleshootingContainer.style.display = 'block';
+        };
+        
+        /**
+         * Creates the troubleshooting container if it doesn't exist
+         */
+        const createTroubleshootingContainer = () => {
+            const connectSection = document.querySelector('.section:nth-child(2)');
+            if (!connectSection) return;
+            
+            const troubleshootingHTML = `
+                <div id="troubleshooting-steps" class="troubleshooting-steps" style="display: none;">
+                    <h4>Troubleshooting Steps</h4>
+                    <div id="troubleshooting-info"></div>
+                </div>
+            `;
+            
+            connectSection.insertAdjacentHTML('beforeend', troubleshootingHTML);
+        };
+        
+        /**
+         * Hides troubleshooting steps
+         */
+        const hideTroubleshootingSteps = () => {
+            const troubleshootingContainer = document.getElementById('troubleshooting-steps');
+            if (troubleshootingContainer) {
+                troubleshootingContainer.style.display = 'none';
+            }
+        };
+        
+        /**
          * Adds network-specific troubleshooting tips to the chat
          * @param {string} errorType - The type of error that occurred
          */
@@ -7861,7 +8407,7 @@
         };
         
         /**
-         * Initiates connection with timeout handling and progress tracking
+         * Initiates connection with enhanced timeout handling and progress tracking
          * @param {string} peerId - The peer ID to connect to
          */
         const initiateConnectionWithTimeout = (peerId) => {
@@ -7870,10 +8416,18 @@
                 clearTimeout(connectionTimeout);
             }
             
-            // Update UI to show connecting state
-            updateConnectionStatus('connecting', 'Connecting...');
-            showConnectionProgress(10, 'Initializing connection...');
+            // Hide previous troubleshooting steps
+            hideTroubleshootingSteps();
             hideNetworkDiagnostics();
+            
+            // Update UI to show connecting state with enhanced details
+            updateConnectionStatus('connecting', 'Initializing connection...', {
+                attempt: retryCount + 1,
+                maxAttempts: maxRetries + 1
+            });
+            
+            // Show initial progress with time estimate
+            showConnectionProgress(10, 'Initializing connection...', 15);
             
             // Record connection start time
             connectionStartTime = Date.now();
@@ -7887,41 +8441,91 @@
             const conn = initiateConnection(peerId);
             
             if (conn) {
-                // Update progress
-                showConnectionProgress(30, 'Establishing peer connection...');
-                
-                // Monitor connection establishment
+                // Monitor connection establishment with enhanced tracking
                 monitorConnectionProgress(conn);
+            } else {
+                // Handle immediate connection failure
+                const error = { type: 'peer-unavailable', message: 'Failed to initiate connection' };
+                handleConnectionError(error);
             }
         };
         
         /**
-         * Monitors connection progress and updates UI accordingly
+         * Monitors connection progress and updates UI with real-time feedback and time estimates
          * @param {Object} conn - The connection object to monitor
          */
         const monitorConnectionProgress = (conn) => {
             let progressValue = 30;
+            const startTime = Date.now();
+            const estimatedTotalTime = 15000; // 15 seconds estimated total time
             
-            // Simulate progress updates
+            // Enhanced progress tracking with detailed stages
+            const progressStages = [
+                { progress: 30, message: 'Establishing peer connection...', duration: 3000 },
+                { progress: 50, message: 'Gathering ICE candidates...', duration: 4000 },
+                { progress: 70, message: 'Negotiating connection path...', duration: 5000 },
+                { progress: 85, message: 'Finalizing connection...', duration: 3000 }
+            ];
+            
+            let currentStageIndex = 0;
+            let stageStartTime = Date.now();
+            
             const progressInterval = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, (estimatedTotalTime - elapsedTime) / 1000);
+                
                 if (conn.open) {
                     clearInterval(progressInterval);
-                    showConnectionProgress(100, 'Connected!');
+                    showConnectionProgress(100, 'Connected!', 0);
+                    updateConnectionStatus('connected', 'Connected successfully');
                     setTimeout(hideConnectionProgress, 2000);
-                } else if (progressValue < 80) {
-                    progressValue += 10;
-                    showConnectionProgress(progressValue, 'Negotiating connection...');
+                    return;
                 }
-            }, 1000);
+                
+                // Check if we should move to next stage
+                const currentStage = progressStages[currentStageIndex];
+                const stageElapsed = Date.now() - stageStartTime;
+                
+                if (currentStageIndex < progressStages.length - 1 && 
+                    stageElapsed >= currentStage.duration) {
+                    currentStageIndex++;
+                    stageStartTime = Date.now();
+                }
+                
+                const stage = progressStages[currentStageIndex];
+                if (stage) {
+                    // Smooth progress within current stage
+                    const stageProgress = Math.min(1, stageElapsed / stage.duration);
+                    const nextStageProgress = progressStages[currentStageIndex + 1]?.progress || 90;
+                    progressValue = stage.progress + (nextStageProgress - stage.progress) * stageProgress * 0.8;
+                    
+                    showConnectionProgress(
+                        Math.min(90, progressValue), 
+                        stage.message, 
+                        remainingTime
+                    );
+                }
+                
+                // Update connection status with attempt details
+                updateConnectionStatus('connecting', 'Establishing connection...', {
+                    attempt: retryCount + 1,
+                    maxAttempts: maxRetries + 1
+                });
+                
+            }, 500); // More frequent updates for smoother progress
             
             // Clear interval if connection fails or times out
             setTimeout(() => {
                 clearInterval(progressInterval);
-            }, 30000);
+                if (!conn.open) {
+                    showConnectionProgress(0, 'Connection timeout');
+                    setTimeout(hideConnectionProgress, 3000);
+                }
+            }, estimatedTotalTime + 5000);
         };
         
         /**
-         * Handles connection timeout
+         * Handles connection timeout with enhanced error reporting
          * @param {string} peerId - The peer ID that timed out
          */
         const handleConnectionTimeout = (peerId) => {
@@ -7929,10 +8533,15 @@
             
             addSystemMessage(`⏰ Connection timeout after ${Math.round(elapsedTime/1000)} seconds`);
             
-            // Create timeout error using modern object syntax
+            // Create enhanced timeout error
             const timeoutError = {
-                type: 'network',
-                message: 'Connection attempt timed out - this usually indicates network connectivity issues'
+                type: 'timeout',
+                message: `Connection attempt timed out after ${Math.round(elapsedTime/1000)} seconds`,
+                details: {
+                    elapsedTime,
+                    peerId,
+                    attempt: retryCount + 1
+                }
             };
             
             handleConnectionError(timeoutError);
@@ -7943,17 +8552,8 @@
                 window.connection = null;
             }
             
-            // Offer retry if attempts remaining
-            const remainingAttempts = MAX_RETRIES - retryCount;
-            if (remainingAttempts > 0) {
-                addSystemMessage(`💡 ${remainingAttempts} retry attempts remaining`);
-            } else {
-                const maxRetryMessages = [
-                    '❌ Maximum retry attempts reached',
-                    '💡 Try refreshing the page or connecting from a different network'
-                ];
-                maxRetryMessages.forEach(msg => addSystemMessage(msg));
-            }
+            // Hide progress indicator
+            hideConnectionProgress();
         };
         
         /**
