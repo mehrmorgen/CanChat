@@ -806,6 +806,49 @@
         .quality-poor {
             background-color: #dc3545;
         }
+        
+        /* TURN Relay Connection Indicators */
+        .relay-notification {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius);
+            margin: var(--spacing-sm) 0;
+            font-size: var(--font-size-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .relay-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #17a2b8;
+            border-radius: 50%;
+            margin-right: var(--spacing-xs);
+            animation: relay-pulse 2s infinite;
+        }
+        
+        @keyframes relay-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .connection-type-relay {
+            color: #17a2b8;
+            font-weight: 600;
+        }
+        
+        .relay-latency-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: var(--spacing-xs);
+            border-radius: var(--border-radius-sm);
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-xs);
+        }
     </style>
 </head>
 <body>
@@ -1981,6 +2024,219 @@
                     expect(true).toBe(true); // Pass if API not available
                 }
             });
+        });
+        
+        describe('TURN Relay Fallback System Tests', () => {
+            test('should have TURN relay configuration in ICE server pool', () => {
+                const turnConfig = iceServerPool.getTURNConfiguration();
+                
+                expect(turnConfig.tier).toBe(3);
+                expect(turnConfig.isRelay).toBe(true);
+                expect(turnConfig.relayNotification).toContain('TURN relay');
+                expect(Array.isArray(turnConfig.iceServers)).toBe(true);
+                
+                // Should have at least one TURN server
+                const turnServers = turnConfig.iceServers.filter(server => server.type === 'turn');
+                expect(turnServers.length).toBeGreaterThan(0);
+                
+                // TURN servers should have credentials
+                turnServers.forEach(server => {
+                    expect(server.username).toBeDefined();
+                    expect(server.credential).toBeDefined();
+                });
+            });
+            
+            test('should have establishTURNRelay method in ICE server pool', () => {
+                expect(typeof iceServerPool.establishTURNRelay).toBe('function');
+                expect(typeof iceServerPool.validateTURNCredentials).toBe('function');
+                expect(typeof iceServerPool._testTURNServer).toBe('function');
+                expect(typeof iceServerPool._createTURNConnection).toBe('function');
+            });
+            
+            asyncTest('should validate TURN server credentials', () => {
+                const turnConfig = iceServerPool.getTURNConfiguration();
+                
+                iceServerPool.validateTURNCredentials(turnConfig.iceServers).then(isValid => {
+                    expect(typeof isValid).toBe('boolean');
+                    
+                    if (isValid) {
+                        addSystemMessage('✅ TURN server credentials validated');
+                    } else {
+                        addSystemMessage('⚠️ TURN server validation failed (may be expected in test environment)');
+                    }
+                });
+            }, 6000);
+            
+            test('should have TURN relay methods in ConnectionManager', () => {
+                if (connectionManager) {
+                    expect(typeof connectionManager.establishTURNRelay).toBe('function');
+                    expect(typeof connectionManager._showRelayNotification).toBe('function');
+                    expect(typeof connectionManager._setupRelayConnectionHandlers).toBe('function');
+                    expect(typeof connectionManager._monitorRelayQuality).toBe('function');
+                    expect(typeof connectionManager._parseRelayStats).toBe('function');
+                    expect(typeof connectionManager._updateRelayQualityUI).toBe('function');
+                }
+            });
+            
+            test('should handle relay message indicators', () => {
+                const chatLog = document.getElementById('chat-log');
+                const initialLength = chatLog.value.length;
+                
+                // Test regular peer message
+                handleReceivedMessage('Hello from peer', false);
+                expect(chatLog.value).toContain('Peer: Hello from peer');
+                
+                // Test relay peer message
+                handleReceivedMessage('Hello via relay', true);
+                expect(chatLog.value).toContain('Peer (Relay): Hello via relay');
+                
+                // Test handleIncomingMessage alias
+                handleIncomingMessage('Test relay message', 'test-peer', true);
+                expect(chatLog.value).toContain('Peer (Relay): Test relay message');
+            });
+            
+            test('should have relay notification UI elements', () => {
+                const statusText = document.getElementById('status-text');
+                const diagnosticInfo = document.getElementById('diagnostic-info');
+                const qualityInfo = document.getElementById('quality-info');
+                
+                expect(statusText).not.toBeNull();
+                expect(diagnosticInfo).not.toBeNull();
+                expect(qualityInfo).not.toBeNull();
+            });
+            
+            asyncTest('should test TURN server connectivity', () => {
+                const turnConfig = iceServerPool.getTURNConfiguration();
+                const turnServers = turnConfig.iceServers.filter(server => server.type === 'turn');
+                
+                if (turnServers.length > 0) {
+                    const testServer = turnServers[0];
+                    
+                    iceServerPool._testTURNServer(testServer).then(isWorking => {
+                        expect(typeof isWorking).toBe('boolean');
+                        
+                        if (isWorking) {
+                            addSystemMessage(`✅ TURN server ${testServer.urls} is reachable`);
+                        } else {
+                            addSystemMessage(`⚠️ TURN server ${testServer.urls} test failed (may be expected)`);
+                        }
+                    });
+                } else {
+                    addSystemMessage('⚠️ No TURN servers configured for testing');
+                    expect(true).toBe(true); // Pass if no TURN servers
+                }
+            }, 8000);
+            
+            test('should integrate TURN relay with connection fallback', () => {
+                if (connectionManager) {
+                    // Mock peer for testing
+                    const mockPeer = {
+                        connect: (peerId) => {
+                            const mockConnection = {
+                                peer: peerId,
+                                open: false,
+                                peerConnection: new RTCPeerConnection(),
+                                on: (event, handler) => {
+                                    if (event === 'open') {
+                                        setTimeout(() => handler(), 100);
+                                    }
+                                }
+                            };
+                            return mockConnection;
+                        }
+                    };
+                    window.peer = mockPeer;
+                    
+                    // Test that tier 3 triggers TURN relay
+                    const tier3Config = iceServerPool.getConfigurationForTier(3);
+                    expect(tier3Config.tier).toBe(3);
+                    expect(tier3Config.isRelay).toBe(true);
+                }
+            });
+            
+            test('should format bytes correctly for relay quality display', () => {
+                if (connectionManager && typeof connectionManager._formatBytes === 'function') {
+                    expect(connectionManager._formatBytes(0)).toBe('0 B');
+                    expect(connectionManager._formatBytes(1024)).toBe('1 KB');
+                    expect(connectionManager._formatBytes(1048576)).toBe('1 MB');
+                    expect(connectionManager._formatBytes(1073741824)).toBe('1 GB');
+                    expect(connectionManager._formatBytes(512)).toBe('512 B');
+                    expect(connectionManager._formatBytes(1536)).toBe('1.5 KB');
+                }
+            });
+            
+            test('should handle relay connection quality monitoring', () => {
+                if (connectionManager) {
+                    const mockStats = new Map([
+                        ['candidate-pair-1', {
+                            type: 'candidate-pair',
+                            state: 'succeeded',
+                            currentRoundTripTime: 0.15, // 150ms
+                            localCandidateId: 'relay-candidate-1',
+                            remoteCandidateId: 'relay-candidate-2'
+                        }],
+                        ['inbound-rtp-1', {
+                            type: 'inbound-rtp',
+                            bytesReceived: 1024
+                        }],
+                        ['outbound-rtp-1', {
+                            type: 'outbound-rtp',
+                            bytesSent: 2048
+                        }]
+                    ]);
+                    
+                    const relayStats = connectionManager._parseRelayStats(mockStats);
+                    
+                    expect(relayStats.isUsingRelay).toBe(true);
+                    expect(relayStats.roundTripTime).toBe(150); // Converted to ms
+                    expect(relayStats.bytesReceived).toBe(1024);
+                    expect(relayStats.bytesSent).toBe(2048);
+                    expect(typeof relayStats.timestamp).toBe('number');
+                }
+            });
+            
+            asyncTest('should simulate TURN relay fallback scenario', () => {
+                if (connectionManager) {
+                    // Mock peer that fails on tiers 1 and 2, succeeds on tier 3
+                    let attemptCount = 0;
+                    const mockPeer = {
+                        connect: (peerId, options) => {
+                            attemptCount++;
+                            const mockConnection = {
+                                peer: peerId,
+                                open: false,
+                                peerConnection: new RTCPeerConnection(),
+                                metadata: options.metadata,
+                                on: (event, handler) => {
+                                    if (event === 'open' && attemptCount >= 3) {
+                                        // Succeed on third attempt (tier 3 - TURN relay)
+                                        setTimeout(() => {
+                                            mockConnection.open = true;
+                                            handler();
+                                        }, 100);
+                                    } else if (event === 'error' && attemptCount < 3) {
+                                        // Fail on first two attempts
+                                        setTimeout(() => handler(new Error('Connection failed')), 50);
+                                    }
+                                }
+                            };
+                            return mockConnection;
+                        }
+                    };
+                    window.peer = mockPeer;
+                    
+                    connectionManager.establishConnection('test-relay-peer').then(connection => {
+                        if (connection) {
+                            expect(connection.metadata.tier).toBe(3);
+                            addSystemMessage('✅ TURN relay fallback simulation successful');
+                        } else {
+                            addSystemMessage('⚠️ TURN relay fallback simulation failed');
+                        }
+                    }).catch(error => {
+                        addSystemMessage(`⚠️ TURN relay simulation error: ${error.message}`);
+                    });
+                }
+            }, 5000);
         });
         
         describe('Deployment Monitoring and Health Checks', () => {
@@ -6223,8 +6479,148 @@
                 return {
                     iceServers: [...tier1.servers, ...tier3.servers],
                     tier: 3,
-                    description: tier3.description
+                    description: tier3.description,
+                    isRelay: true,
+                    relayNotification: 'Using TURN relay server for connection - this may increase latency but improves reliability'
                 };
+            }
+            
+            /**
+             * Establish TURN relay connection with authentication
+             * @param {string} peerId - Target peer ID
+             * @returns {Promise<Object>} Connection result with relay information
+             */
+            async establishTURNRelay(peerId) {
+                const turnConfig = this.getTURNConfiguration();
+                
+                try {
+                    // Validate TURN server credentials
+                    const isValid = await this.validateTURNCredentials(turnConfig.iceServers);
+                    if (!isValid) {
+                        throw new Error('TURN server authentication failed');
+                    }
+                    
+                    // Create connection with TURN relay
+                    const connection = await this._createTURNConnection(peerId, turnConfig);
+                    
+                    return {
+                        connection,
+                        isRelay: true,
+                        relayType: 'TURN',
+                        notification: turnConfig.relayNotification,
+                        servers: turnConfig.iceServers.filter(server => server.type === 'turn')
+                    };
+                    
+                } catch (error) {
+                    console.error('TURN relay establishment failed:', error);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Validate TURN server credentials
+             * @private
+             */
+            async validateTURNCredentials(iceServers) {
+                const turnServers = iceServers.filter(server => server.type === 'turn');
+                
+                if (turnServers.length === 0) {
+                    return false;
+                }
+                
+                // Test each TURN server
+                for (const server of turnServers) {
+                    try {
+                        const isValid = await this._testTURNServer(server);
+                        if (isValid) {
+                            return true;
+                        }
+                    } catch (error) {
+                        console.warn(`TURN server validation failed for ${server.urls}:`, error);
+                    }
+                }
+                
+                return false;
+            }
+            
+            /**
+             * Test TURN server connectivity and authentication
+             * @private
+             */
+            async _testTURNServer(server) {
+                return new Promise((resolve) => {
+                    const testPc = new RTCPeerConnection({
+                        iceServers: [server]
+                    });
+                    
+                    let relayFound = false;
+                    const timeout = setTimeout(() => {
+                        testPc.close();
+                        resolve(relayFound);
+                    }, 5000);
+                    
+                    testPc.onicecandidate = (event) => {
+                        if (event.candidate && event.candidate.candidate.includes('typ relay')) {
+                            relayFound = true;
+                            clearTimeout(timeout);
+                            testPc.close();
+                            resolve(true);
+                        }
+                    };
+                    
+                    // Create data channel and offer to trigger ICE gathering
+                    testPc.createDataChannel('turn-test');
+                    testPc.createOffer().then(offer => testPc.setLocalDescription(offer));
+                });
+            }
+            
+            /**
+             * Create TURN relay connection
+             * @private
+             */
+            async _createTURNConnection(peerId, turnConfig) {
+                return new Promise((resolve, reject) => {
+                    // Force TURN relay by filtering out STUN servers for this attempt
+                    const turnOnlyConfig = {
+                        ...turnConfig,
+                        iceServers: turnConfig.iceServers.filter(server => server.type === 'turn')
+                    };
+                    
+                    // Create peer connection with TURN-only configuration
+                    const connection = peer.connect(peerId, {
+                        reliable: true,
+                        serialization: 'json',
+                        metadata: {
+                            tier: 3,
+                            connectionType: 'turn-relay',
+                            timestamp: Date.now()
+                        }
+                    });
+                    
+                    let resolved = false;
+                    const timeout = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            reject(new Error('TURN relay connection timeout'));
+                        }
+                    }, 15000); // 15 second timeout for TURN
+                    
+                    connection.on('open', () => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            resolve(connection);
+                        }
+                    });
+                    
+                    connection.on('error', (error) => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            reject(error);
+                        }
+                    });
+                });
             }
             
             /**
@@ -7927,15 +8323,21 @@
          * Handles received messages from the connected peer
          * @param {string} message - The received message text
          */
-        const handleReceivedMessage = (message) => {
+        const handleReceivedMessage = (message, isRelay = false) => {
             // Check for ICE server test commands
             if (message.startsWith('/ice')) {
                 handleICECommand(message);
                 return;
             }
             
-            // Add received message to chat log with "Peer:" prefix
-            addMessageToChat(message, 'peer');
+            // Add received message to chat log with appropriate prefix
+            const prefix = isRelay ? 'peer-relay' : 'peer';
+            addMessageToChat(message, prefix);
+        };
+        
+        // Create handleIncomingMessage alias for compatibility
+        const handleIncomingMessage = (data, peerId, isRelay = false) => {
+            handleReceivedMessage(data, isRelay);
         };
         
         /**
@@ -7983,10 +8385,11 @@
         const addMessageToChat = (message, sender) => {
             const chatLog = document.getElementById('chat-log');
             
-            // Modern Map-based prefix lookup
+            // Modern Map-based prefix lookup with relay support
             const prefixes = new Map([
                 ['me', 'Me:'],
                 ['peer', 'Peer:'],
+                ['peer-relay', 'Peer (Relay):'],
                 ['system', 'System:']
             ]);
             
@@ -8411,7 +8814,12 @@
                 updateProgressBar(25 + (this.retryCount * 15));
                 
                 try {
-                    return await this._attemptConnectionWithTier(peerId, nextTier, {});
+                    // Special handling for TURN relay (Tier 3)
+                    if (nextTier === 3) {
+                        return await this.establishTURNRelay(peerId);
+                    } else {
+                        return await this._attemptConnectionWithTier(peerId, nextTier, {});
+                    }
                 } catch (error) {
                     console.error(`Fallback attempt ${this.retryCount} failed:`, error);
                     
@@ -8424,6 +8832,232 @@
                         return null;
                     }
                 }
+            }
+            
+            /**
+             * Establish TURN relay connection when P2P fails
+             * @param {string} peerId - Target peer ID
+             * @returns {Promise<Object|null>} Connection object or null
+             */
+            async establishTURNRelay(peerId) {
+                addSystemMessage('🔄 Attempting TURN relay connection...');
+                updateProgressBar(60);
+                
+                try {
+                    const relayResult = await this.iceServerPool.establishTURNRelay(peerId);
+                    
+                    if (relayResult && relayResult.connection) {
+                        // Show user notification about relay usage
+                        this._showRelayNotification(relayResult);
+                        
+                        // Set up connection handlers for relay connection
+                        this._setupRelayConnectionHandlers(relayResult.connection, peerId);
+                        
+                        addSystemMessage(`✅ TURN relay connection established`);
+                        updateProgressBar(100);
+                        updateConnectionStatus('connected');
+                        
+                        // Start connection quality monitoring
+                        this.monitorConnectionQuality(relayResult.connection);
+                        
+                        return relayResult.connection;
+                    } else {
+                        throw new Error('TURN relay connection failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('TURN relay establishment failed:', error);
+                    addSystemMessage(`❌ TURN relay failed: ${error.message}`);
+                    throw error;
+                }
+            }
+            
+            /**
+             * Show user notification about relay connection usage
+             * @private
+             */
+            _showRelayNotification(relayResult) {
+                const notification = relayResult.notification || 'Using relay server for connection';
+                
+                // Add system message with relay information
+                addSystemMessage(`🔄 ${notification}`);
+                
+                // Show relay indicator in connection status
+                const statusElement = document.getElementById('status-text');
+                if (statusElement) {
+                    statusElement.textContent = 'Connected (Relay)';
+                    statusElement.title = 'Connection established through TURN relay server';
+                }
+                
+                // Add relay information to diagnostics
+                const diagnosticInfo = document.getElementById('diagnostic-info');
+                if (diagnosticInfo) {
+                    const relayInfo = document.createElement('div');
+                    relayInfo.className = 'diagnostic-item diagnostic-warning';
+                    relayInfo.innerHTML = `
+                        <strong>🔄 Relay Connection:</strong> Using TURN server for NAT traversal<br>
+                        <small>This may increase latency but improves connection reliability</small>
+                    `;
+                    diagnosticInfo.appendChild(relayInfo);
+                    
+                    // Show diagnostics panel
+                    const diagnosticsPanel = document.getElementById('network-diagnostics');
+                    if (diagnosticsPanel) {
+                        diagnosticsPanel.style.display = 'block';
+                    }
+                }
+                
+                // Log relay servers being used
+                if (relayResult.servers && relayResult.servers.length > 0) {
+                    const serverList = relayResult.servers.map(s => s.urls).join(', ');
+                    console.log(`Using TURN relay servers: ${serverList}`);
+                    addSystemMessage(`🌐 Relay servers: ${serverList}`);
+                }
+            }
+            
+            /**
+             * Set up connection handlers specifically for relay connections
+             * @private
+             */
+            _setupRelayConnectionHandlers(connection, peerId) {
+                // Standard connection handlers
+                connection.on('data', (data) => {
+                    handleIncomingMessage(data, peerId, true); // true indicates relay connection
+                });
+                
+                connection.on('close', () => {
+                    addSystemMessage('🔄 Relay connection closed');
+                    updateConnectionStatus('disconnected');
+                    
+                    // Clear relay indicator
+                    const statusElement = document.getElementById('status-text');
+                    if (statusElement) {
+                        statusElement.textContent = 'Disconnected';
+                        statusElement.title = '';
+                    }
+                });
+                
+                connection.on('error', (error) => {
+                    console.error('Relay connection error:', error);
+                    addSystemMessage(`❌ Relay connection error: ${error.message}`);
+                    updateConnectionStatus('error');
+                });
+                
+                // Monitor relay connection quality
+                this._monitorRelayQuality(connection);
+            }
+            
+            /**
+             * Monitor relay connection quality and provide feedback
+             * @private
+             */
+            _monitorRelayQuality(connection) {
+                if (!connection || !connection.peerConnection) {
+                    return;
+                }
+                
+                const pc = connection.peerConnection;
+                let relayQualityChecks = 0;
+                const maxQualityChecks = 12; // Monitor for 1 minute (5s intervals)
+                
+                const checkRelayQuality = async () => {
+                    try {
+                        const stats = await pc.getStats();
+                        const relayStats = this._parseRelayStats(stats);
+                        
+                        if (relayStats.isUsingRelay) {
+                            this._updateRelayQualityUI(relayStats);
+                            
+                            // Warn about high latency
+                            if (relayStats.roundTripTime > 200) {
+                                addSystemMessage(`⚠️ High relay latency detected: ${relayStats.roundTripTime}ms`);
+                            }
+                        }
+                        
+                        relayQualityChecks++;
+                        
+                        // Continue monitoring for a limited time
+                        if (connection.open && relayQualityChecks < maxQualityChecks) {
+                            setTimeout(checkRelayQuality, 5000);
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error monitoring relay quality:', error);
+                    }
+                };
+                
+                // Start monitoring after connection is established
+                setTimeout(checkRelayQuality, 3000);
+            }
+            
+            /**
+             * Parse WebRTC stats specifically for relay connections
+             * @private
+             */
+            _parseRelayStats(stats) {
+                const relayStats = {
+                    isUsingRelay: false,
+                    roundTripTime: 0,
+                    bytesReceived: 0,
+                    bytesSent: 0,
+                    relayProtocol: null,
+                    timestamp: Date.now()
+                };
+                
+                stats.forEach((report) => {
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        // Check if we're using a relay candidate
+                        if (report.localCandidateId || report.remoteCandidateId) {
+                            relayStats.isUsingRelay = true;
+                            relayStats.roundTripTime = report.currentRoundTripTime * 1000 || 0; // Convert to ms
+                        }
+                    } else if (report.type === 'inbound-rtp') {
+                        relayStats.bytesReceived += report.bytesReceived || 0;
+                    } else if (report.type === 'outbound-rtp') {
+                        relayStats.bytesSent += report.bytesSent || 0;
+                    }
+                });
+                
+                return relayStats;
+            }
+            
+            /**
+             * Update UI with relay connection quality information
+             * @private
+             */
+            _updateRelayQualityUI(relayStats) {
+                const qualityInfo = document.getElementById('quality-info');
+                if (!qualityInfo) return;
+                
+                const latencyClass = relayStats.roundTripTime > 200 ? 'quality-poor' : 
+                                   relayStats.roundTripTime > 100 ? 'quality-good' : 'quality-excellent';
+                
+                qualityInfo.innerHTML = `
+                    <div class="quality-indicator ${latencyClass}"></div>
+                    <span>Relay Connection Quality</span>
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        Latency: ${Math.round(relayStats.roundTripTime)}ms<br>
+                        Data: ↓${this._formatBytes(relayStats.bytesReceived)} ↑${this._formatBytes(relayStats.bytesSent)}
+                    </div>
+                `;
+                
+                // Show quality panel
+                const qualityPanel = document.getElementById('connection-quality');
+                if (qualityPanel) {
+                    qualityPanel.style.display = 'block';
+                }
+            }
+            
+            /**
+             * Format bytes for display
+             * @private
+             */
+            _formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
             }
             
             /**

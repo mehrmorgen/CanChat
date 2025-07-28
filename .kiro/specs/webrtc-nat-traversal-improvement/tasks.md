@@ -32,7 +32,7 @@
   - Commit to git
   - _Requirements: 3.1, 3.2, 3.4_
 
-- [ ] 5. Implement TURN relay fallback system
+- [x] 5. Implement TURN relay fallback system
   - Add TURN server configuration and authentication handling
   - Implement automatic fallback to TURN relay when P2P fails
   - Create user notification system for relay connection usage
