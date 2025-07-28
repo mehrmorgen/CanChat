@@ -2235,6 +2235,284 @@
             });
         });
         
+        // ===== NETWORK DETECTOR TESTS =====
+        
+        describe('Network Detection Tests', () => {
+            test('should create NetworkDetector instance', () => {
+                expect(networkDetector).not.toBeNull();
+                expect(networkDetector instanceof NetworkDetector).toBe(true);
+            });
+            
+            test('should have default STUN servers configured', () => {
+                expect(Array.isArray(networkDetector.stunServers)).toBe(true);
+                expect(networkDetector.stunServers.length).toBeGreaterThan(0);
+                expect(networkDetector.stunServers[0]).toBe('stun:stun.l.google.com:19302');
+            });
+            
+            test('should initialize with unknown network type', () => {
+                expect(networkDetector.networkType).toBe('unknown');
+                expect(networkDetector.connectionInfo).toBeNull();
+                expect(networkDetector.lastDetectionTime).toBeNull();
+            });
+            
+            test('should have latency and connectivity result maps', () => {
+                expect(networkDetector.latencyResults instanceof Map).toBe(true);
+                expect(networkDetector.connectivityResults instanceof Map).toBe(true);
+                expect(networkDetector.latencyResults.size).toBe(0);
+                expect(networkDetector.connectivityResults.size).toBe(0);
+            });
+            
+            asyncTest('should detect network type', () => {
+                networkDetector.detectNetworkType().then(networkType => {
+                    expect(typeof networkType).toBe('string');
+                    expect(['wifi', 'cellular', 'unknown']).toContain(networkType);
+                    expect(networkDetector.networkType).toBe(networkType);
+                    expect(networkDetector.lastDetectionTime).not.toBeNull();
+                    expect(typeof networkDetector.lastDetectionTime).toBe('number');
+                    
+                    console.log(`Detected network type: ${networkType}`);
+                    if (networkDetector.connectionInfo) {
+                        console.log('Connection info:', networkDetector.connectionInfo);
+                    }
+                });
+            }, 5000);
+            
+            asyncTest('should test STUN server connectivity', () => {
+                const testServers = ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'];
+                
+                networkDetector.testSTUNConnectivity(testServers).then(results => {
+                    expect(results instanceof Map).toBe(true);
+                    expect(results.size).toBe(testServers.length);
+                    
+                    for (const [serverUrl, result] of results) {
+                        expect(typeof serverUrl).toBe('string');
+                        expect(typeof result.connected).toBe('boolean');
+                        expect(typeof result.responseTime).toBe('number');
+                        expect(typeof result.candidatesFound).toBe('number');
+                        expect(typeof result.timestamp).toBe('string');
+                        expect(result.responseTime).toBeGreaterThan(0);
+                        
+                        console.log(`STUN server ${serverUrl}: connected=${result.connected}, responseTime=${result.responseTime}ms, candidates=${result.candidatesFound}`);
+                    }
+                    
+                    // At least one server should be reachable
+                    const connectedServers = Array.from(results.values()).filter(r => r.connected);
+                    expect(connectedServers.length).toBeGreaterThan(0);
+                });
+            }, 15000);
+            
+            asyncTest('should measure server latency', () => {
+                const testServers = ['stun:stun.l.google.com:19302'];
+                
+                networkDetector.measureLatency(testServers).then(results => {
+                    expect(results instanceof Map).toBe(true);
+                    expect(results.size).toBe(testServers.length);
+                    
+                    for (const [serverUrl, result] of results) {
+                        expect(typeof serverUrl).toBe('string');
+                        expect(Array.isArray(result.measurements)).toBe(true);
+                        expect(typeof result.successRate).toBe('number');
+                        expect(result.successRate).toBeGreaterThanOrEqual(0);
+                        expect(result.successRate).toBeLessThanOrEqual(1);
+                        
+                        if (result.measurements.length > 0) {
+                            expect(typeof result.averageLatency).toBe('number');
+                            expect(typeof result.minLatency).toBe('number');
+                            expect(typeof result.maxLatency).toBe('number');
+                            expect(result.averageLatency).toBeGreaterThan(0);
+                            expect(result.minLatency).toBeGreaterThan(0);
+                            expect(result.maxLatency).toBeGreaterThan(0);
+                            
+                            console.log(`Latency for ${serverUrl}: avg=${result.averageLatency}ms, min=${result.minLatency}ms, max=${result.maxLatency}ms, success=${result.successRate}`);
+                        }
+                    }
+                });
+            }, 20000);
+            
+            test('should provide optimal ICE configuration', () => {
+                const config = networkDetector.getOptimalICEConfiguration();
+                
+                expect(typeof config).toBe('object');
+                expect(Array.isArray(config.iceServers)).toBe(true);
+                expect(typeof config.networkType).toBe('string');
+                expect(typeof config.recommendedTier).toBe('number');
+                expect(Array.isArray(config.reasoning)).toBe(true);
+                
+                expect(config.recommendedTier).toBeGreaterThanOrEqual(1);
+                expect(config.recommendedTier).toBeLessThanOrEqual(4);
+                expect(config.iceServers.length).toBeGreaterThan(0);
+                expect(config.reasoning.length).toBeGreaterThan(0);
+                
+                console.log('Optimal ICE configuration:', config);
+            });
+            
+            test('should provide network summary', () => {
+                const summary = networkDetector.getNetworkSummary();
+                
+                expect(typeof summary).toBe('object');
+                expect(typeof summary.networkType).toBe('string');
+                expect(typeof summary.lastDetectionTime).toBe('number');
+                expect(Array.isArray(summary.stunConnectivity)).toBe(true);
+                expect(Array.isArray(summary.latencyMeasurements)).toBe(true);
+                expect(typeof summary.optimalConfiguration).toBe('object');
+                
+                console.log('Network summary:', summary);
+            });
+            
+            test('should handle network type detection from user agent', () => {
+                // Test private method through public interface
+                const originalUserAgent = navigator.userAgent;
+                
+                // Test mobile detection
+                Object.defineProperty(navigator, 'userAgent', {
+                    value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
+                    configurable: true
+                });
+                
+                const mobileType = networkDetector._detectNetworkTypeFromUserAgent();
+                expect(mobileType).toBe('cellular');
+                
+                // Test desktop detection
+                Object.defineProperty(navigator, 'userAgent', {
+                    value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    configurable: true
+                });
+                
+                const desktopType = networkDetector._detectNetworkTypeFromUserAgent();
+                expect(desktopType).toBe('wifi');
+                
+                // Restore original user agent
+                Object.defineProperty(navigator, 'userAgent', {
+                    value: originalUserAgent,
+                    configurable: true
+                });
+            });
+            
+            asyncTest('should handle STUN server test failures gracefully', () => {
+                const invalidServers = ['stun:invalid.server.com:19302'];
+                
+                networkDetector.testSTUNConnectivity(invalidServers).then(results => {
+                    expect(results instanceof Map).toBe(true);
+                    expect(results.size).toBe(1);
+                    
+                    const result = results.get('stun:invalid.server.com:19302');
+                    expect(result.connected).toBe(false);
+                    expect(typeof result.error).toBe('string');
+                    expect(result.responseTime).toBeGreaterThanOrEqual(networkDetector.detectionTimeout);
+                    
+                    console.log('Invalid server test result:', result);
+                });
+            }, 15000);
+            
+            test('should have proper timeout configuration', () => {
+                expect(typeof networkDetector.detectionTimeout).toBe('number');
+                expect(networkDetector.detectionTimeout).toBeGreaterThan(0);
+                expect(networkDetector.detectionTimeout).toBe(10000); // 10 seconds
+            });
+            
+            asyncTest('should detect network changes', () => {
+                const initialType = networkDetector.networkType;
+                
+                // Simulate network change by re-detecting
+                networkDetector.detectNetworkType().then(newType => {
+                    expect(typeof newType).toBe('string');
+                    expect(['wifi', 'cellular', 'unknown']).toContain(newType);
+                    
+                    // Network type should be consistent or updated
+                    expect(networkDetector.networkType).toBe(newType);
+                    
+                    console.log(`Network type: ${initialType} -> ${newType}`);
+                });
+            }, 5000);
+        });
+        
+        describe('Network Detection Accuracy Tests', () => {
+            test('should validate detection methods exist', () => {
+                expect(typeof networkDetector.detectNetworkType).toBe('function');
+                expect(typeof networkDetector.testSTUNConnectivity).toBe('function');
+                expect(typeof networkDetector.measureLatency).toBe('function');
+                expect(typeof networkDetector.getOptimalICEConfiguration).toBe('function');
+                expect(typeof networkDetector.getNetworkSummary).toBe('function');
+            });
+            
+            test('should handle Network Information API availability', () => {
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                
+                if (connection) {
+                    console.log('Network Information API available');
+                    expect(typeof connection.effectiveType).toBe('string');
+                    
+                    if (connection.type) {
+                        expect(typeof connection.type).toBe('string');
+                    }
+                    if (connection.downlink !== undefined) {
+                        expect(typeof connection.downlink).toBe('number');
+                    }
+                    if (connection.rtt !== undefined) {
+                        expect(typeof connection.rtt).toBe('number');
+                    }
+                } else {
+                    console.log('Network Information API not available - using fallback methods');
+                    expect(true).toBe(true); // Pass if API not available
+                }
+            });
+            
+            asyncTest('should provide consistent results across multiple detections', () => {
+                const detectionPromises = [];
+                
+                // Run multiple detections
+                for (let i = 0; i < 3; i++) {
+                    detectionPromises.push(networkDetector.detectNetworkType());
+                }
+                
+                Promise.all(detectionPromises).then(results => {
+                    expect(results.length).toBe(3);
+                    
+                    // All results should be valid network types
+                    results.forEach(result => {
+                        expect(['wifi', 'cellular', 'unknown']).toContain(result);
+                    });
+                    
+                    // Results should be consistent (same network shouldn't change rapidly)
+                    const uniqueResults = [...new Set(results)];
+                    expect(uniqueResults.length).toBeLessThanOrEqual(2); // Allow for some variation
+                    
+                    console.log('Multiple detection results:', results);
+                });
+            }, 10000);
+            
+            test('should handle edge cases in network detection', () => {
+                // Test with empty server list
+                const emptyServerTest = networkDetector.testSTUNConnectivity([]);
+                expect(emptyServerTest instanceof Promise).toBe(true);
+                
+                // Test with null/undefined parameters
+                expect(() => networkDetector.getOptimalICEConfiguration()).not.toThrow();
+                expect(() => networkDetector.getNetworkSummary()).not.toThrow();
+            });
+            
+            asyncTest('should measure performance impact of detection', () => {
+                const startTime = performance.now();
+                
+                networkDetector.detectNetworkType().then(() => {
+                    const endTime = performance.now();
+                    const detectionTime = endTime - startTime;
+                    
+                    console.log(`Network detection took ${detectionTime.toFixed(2)}ms`);
+                    
+                    // Detection should complete within reasonable time
+                    expect(detectionTime).toBeLessThan(5000); // 5 seconds max
+                    
+                    // Should not consume excessive resources
+                    if (performance.memory) {
+                        const memoryUsed = performance.memory.usedJSHeapSize;
+                        console.log(`Memory usage after detection: ${memoryUsed} bytes`);
+                        expect(memoryUsed).toBeLessThan(50000000); // 50MB threshold
+                    }
+                });
+            }, 8000);
+        });
+        
         // ===== ICE SERVER POOL TESTS =====
         
         describe('ICE Server Pool Configuration Tests', () => {
@@ -4638,6 +4916,369 @@
             PERFORMANCE_MONITORING: true
         };
         
+        // ===== NETWORK DETECTION SYSTEM =====
+        
+        /**
+         * NetworkDetector class for identifying connection types and testing server connectivity
+         * Implements network type detection, STUN server testing, and latency measurement
+         */
+        class NetworkDetector {
+            constructor() {
+                this.networkType = 'unknown';
+                this.connectionInfo = null;
+                this.stunServers = [
+                    'stun:stun.l.google.com:19302',
+                    'stun:stun1.l.google.com:19302',
+                    'stun:stun.stunprotocol.org:3478',
+                    'stun:stun.services.mozilla.com'
+                ];
+                this.latencyResults = new Map();
+                this.connectivityResults = new Map();
+                this.lastDetectionTime = null;
+                this.detectionTimeout = 10000; // 10 seconds
+            }
+            
+            /**
+             * Detect network type (WiFi vs cellular vs unknown)
+             * @returns {Promise<string>} Network type: 'wifi', 'cellular', or 'unknown'
+             */
+            async detectNetworkType() {
+                try {
+                    // Use Network Information API if available
+                    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                    
+                    if (connection) {
+                        this.connectionInfo = {
+                            effectiveType: connection.effectiveType,
+                            type: connection.type,
+                            downlink: connection.downlink,
+                            rtt: connection.rtt,
+                            saveData: connection.saveData
+                        };
+                        
+                        // Determine network type based on connection info
+                        if (connection.type === 'cellular') {
+                            this.networkType = 'cellular';
+                        } else if (connection.type === 'wifi') {
+                            this.networkType = 'wifi';
+                        } else if (connection.effectiveType) {
+                            // Infer from effective type
+                            if (['slow-2g', '2g', '3g'].includes(connection.effectiveType)) {
+                                this.networkType = 'cellular';
+                            } else if (connection.effectiveType === '4g' && connection.downlink < 10) {
+                                this.networkType = 'cellular';
+                            } else {
+                                this.networkType = 'wifi';
+                            }
+                        }
+                    }
+                    
+                    // Fallback: Use user agent and performance heuristics
+                    if (this.networkType === 'unknown') {
+                        this.networkType = this._detectNetworkTypeFromUserAgent();
+                    }
+                    
+                    // Additional heuristic: measure connection speed
+                    if (this.networkType === 'unknown') {
+                        this.networkType = await this._detectNetworkTypeFromSpeed();
+                    }
+                    
+                    this.lastDetectionTime = Date.now();
+                    console.log(`Network type detected: ${this.networkType}`, this.connectionInfo);
+                    
+                    return this.networkType;
+                } catch (error) {
+                    console.warn('Network type detection failed:', error);
+                    this.networkType = 'unknown';
+                    return this.networkType;
+                }
+            }
+            
+            /**
+             * Test STUN server connectivity
+             * @param {Array<string>} stunServers - Array of STUN server URLs to test
+             * @returns {Promise<Map>} Map of server URLs to connectivity results
+             */
+            async testSTUNConnectivity(stunServers = this.stunServers) {
+                const connectivityPromises = stunServers.map(async (serverUrl) => {
+                    try {
+                        const startTime = Date.now();
+                        const result = await this._testSingleSTUNServer(serverUrl);
+                        const endTime = Date.now();
+                        
+                        const connectivityResult = {
+                            url: serverUrl,
+                            connected: result.connected,
+                            responseTime: endTime - startTime,
+                            candidatesFound: result.candidatesFound,
+                            error: result.error,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        this.connectivityResults.set(serverUrl, connectivityResult);
+                        return [serverUrl, connectivityResult];
+                    } catch (error) {
+                        const connectivityResult = {
+                            url: serverUrl,
+                            connected: false,
+                            responseTime: this.detectionTimeout,
+                            candidatesFound: 0,
+                            error: error.message,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        this.connectivityResults.set(serverUrl, connectivityResult);
+                        return [serverUrl, connectivityResult];
+                    }
+                });
+                
+                const results = await Promise.allSettled(connectivityPromises);
+                const connectivityMap = new Map();
+                
+                results.forEach((result) => {
+                    if (result.status === 'fulfilled') {
+                        const [serverUrl, connectivityResult] = result.value;
+                        connectivityMap.set(serverUrl, connectivityResult);
+                    }
+                });
+                
+                console.log('STUN connectivity test results:', Array.from(connectivityMap.entries()));
+                return connectivityMap;
+            }
+            
+            /**
+             * Measure latency to multiple servers for optimal selection
+             * @param {Array<string>} servers - Array of server URLs to test
+             * @returns {Promise<Map>} Map of server URLs to latency measurements
+             */
+            async measureLatency(servers = this.stunServers) {
+                const latencyPromises = servers.map(async (serverUrl) => {
+                    try {
+                        const measurements = [];
+                        const numTests = 3; // Multiple measurements for accuracy
+                        
+                        for (let i = 0; i < numTests; i++) {
+                            const startTime = Date.now();
+                            const result = await this._testSingleSTUNServer(serverUrl);
+                            const endTime = Date.now();
+                            
+                            if (result.connected) {
+                                measurements.push(endTime - startTime);
+                            }
+                            
+                            // Small delay between tests
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        
+                        const latencyResult = {
+                            url: serverUrl,
+                            measurements: measurements,
+                            averageLatency: measurements.length > 0 ? 
+                                Math.round(measurements.reduce((a, b) => a + b, 0) / measurements.length) : null,
+                            minLatency: measurements.length > 0 ? Math.min(...measurements) : null,
+                            maxLatency: measurements.length > 0 ? Math.max(...measurements) : null,
+                            successRate: measurements.length / numTests,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        this.latencyResults.set(serverUrl, latencyResult);
+                        return [serverUrl, latencyResult];
+                    } catch (error) {
+                        const latencyResult = {
+                            url: serverUrl,
+                            measurements: [],
+                            averageLatency: null,
+                            minLatency: null,
+                            maxLatency: null,
+                            successRate: 0,
+                            error: error.message,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        this.latencyResults.set(serverUrl, latencyResult);
+                        return [serverUrl, latencyResult];
+                    }
+                });
+                
+                const results = await Promise.allSettled(latencyPromises);
+                const latencyMap = new Map();
+                
+                results.forEach((result) => {
+                    if (result.status === 'fulfilled') {
+                        const [serverUrl, latencyResult] = result.value;
+                        latencyMap.set(serverUrl, latencyResult);
+                    }
+                });
+                
+                console.log('Latency measurement results:', Array.from(latencyMap.entries()));
+                return latencyMap;
+            }
+            
+            /**
+             * Get optimal ICE configuration based on network conditions
+             * @returns {Object} Optimal ICE server configuration
+             */
+            getOptimalICEConfiguration() {
+                const config = {
+                    iceServers: [],
+                    networkType: this.networkType,
+                    recommendedTier: 1,
+                    reasoning: []
+                };
+                
+                // Get best performing servers based on latency
+                const sortedServers = Array.from(this.latencyResults.entries())
+                    .filter(([url, result]) => result.successRate > 0.5)
+                    .sort((a, b) => (a[1].averageLatency || Infinity) - (b[1].averageLatency || Infinity))
+                    .slice(0, 2); // Top 2 servers
+                
+                if (sortedServers.length > 0) {
+                    config.iceServers = sortedServers.map(([url]) => ({ urls: url }));
+                    config.reasoning.push(`Selected ${sortedServers.length} best performing STUN servers`);
+                } else {
+                    // Fallback to default configuration
+                    config.iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+                    config.reasoning.push('Using default STUN server (no performance data available)');
+                }
+                
+                // Adjust recommendations based on network type
+                if (this.networkType === 'cellular') {
+                    config.recommendedTier = 2; // Use fallback servers for cellular
+                    config.reasoning.push('Cellular network detected - recommending tier 2 configuration');
+                } else if (this.networkType === 'wifi') {
+                    config.recommendedTier = 1; // Default tier for WiFi
+                    config.reasoning.push('WiFi network detected - using tier 1 configuration');
+                } else {
+                    config.recommendedTier = 2; // Conservative approach for unknown networks
+                    config.reasoning.push('Unknown network type - using conservative tier 2 configuration');
+                }
+                
+                return config;
+            }
+            
+            /**
+             * Get network detection summary
+             * @returns {Object} Summary of network detection results
+             */
+            getNetworkSummary() {
+                return {
+                    networkType: this.networkType,
+                    connectionInfo: this.connectionInfo,
+                    lastDetectionTime: this.lastDetectionTime,
+                    stunConnectivity: Array.from(this.connectivityResults.entries()),
+                    latencyMeasurements: Array.from(this.latencyResults.entries()),
+                    optimalConfiguration: this.getOptimalICEConfiguration()
+                };
+            }
+            
+            // ===== PRIVATE HELPER METHODS =====
+            
+            /**
+             * Detect network type from user agent string
+             * @private
+             * @returns {string} Network type
+             */
+            _detectNetworkTypeFromUserAgent() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                
+                // Mobile device indicators suggest cellular capability
+                if (/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)) {
+                    return 'cellular';
+                }
+                
+                // Desktop/laptop typically means WiFi
+                return 'wifi';
+            }
+            
+            /**
+             * Detect network type from connection speed heuristics
+             * @private
+             * @returns {Promise<string>} Network type
+             */
+            async _detectNetworkTypeFromSpeed() {
+                try {
+                    // Simple speed test using a small resource
+                    const startTime = Date.now();
+                    const response = await fetch('data:text/plain;base64,SGVsbG8gV29ybGQ=', {
+                        cache: 'no-cache'
+                    });
+                    const endTime = Date.now();
+                    
+                    const responseTime = endTime - startTime;
+                    
+                    // Very rough heuristic: slower responses might indicate cellular
+                    if (responseTime > 500) {
+                        return 'cellular';
+                    } else {
+                        return 'wifi';
+                    }
+                } catch (error) {
+                    console.warn('Speed-based network detection failed:', error);
+                    return 'unknown';
+                }
+            }
+            
+            /**
+             * Test connectivity to a single STUN server
+             * @private
+             * @param {string} serverUrl - STUN server URL
+             * @returns {Promise<Object>} Test result
+             */
+            async _testSingleSTUNServer(serverUrl) {
+                return new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        pc.close();
+                        reject(new Error('STUN server test timeout'));
+                    }, this.detectionTimeout);
+                    
+                    const pc = new RTCPeerConnection({
+                        iceServers: [{ urls: serverUrl }]
+                    });
+                    
+                    let candidatesFound = 0;
+                    let connected = false;
+                    
+                    pc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            candidatesFound++;
+                            if (event.candidate.candidate.includes('srflx')) {
+                                connected = true;
+                            }
+                        } else {
+                            // ICE gathering complete
+                            clearTimeout(timeout);
+                            pc.close();
+                            resolve({
+                                connected: connected,
+                                candidatesFound: candidatesFound
+                            });
+                        }
+                    };
+                    
+                    pc.onicegatheringstatechange = () => {
+                        if (pc.iceGatheringState === 'complete') {
+                            clearTimeout(timeout);
+                            pc.close();
+                            resolve({
+                                connected: connected,
+                                candidatesFound: candidatesFound
+                            });
+                        }
+                    };
+                    
+                    // Create data channel to trigger ICE gathering
+                    pc.createDataChannel('test');
+                    pc.createOffer()
+                        .then(offer => pc.setLocalDescription(offer))
+                        .catch(error => {
+                            clearTimeout(timeout);
+                            pc.close();
+                            reject(error);
+                        });
+                });
+            }
+        }
+        
         // ===== ICE SERVER CONFIGURATION SYSTEM =====
         
         /**
@@ -4973,6 +5614,9 @@
         
         // Global ICE server pool instance
         const iceServerPool = new ICEServerPool();
+        
+        // Global network detector instance
+        const networkDetector = new NetworkDetector();
         
         // Modern Map for better performance than objects
         const connectionStates = new Map([
