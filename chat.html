@@ -2235,6 +2235,236 @@
             });
         });
         
+        // ===== ICE SERVER POOL TESTS =====
+        
+        describe('ICE Server Pool Configuration Tests', () => {
+            test('should create ICEServerPool instance', () => {
+                expect(iceServerPool).not.toBeNull();
+                expect(iceServerPool instanceof ICEServerPool).toBe(true);
+            });
+            
+            test('should have all four server tiers configured', () => {
+                expect(iceServerPool.serverTiers.size).toBe(4);
+                expect(iceServerPool.serverTiers.has(1)).toBe(true);
+                expect(iceServerPool.serverTiers.has(2)).toBe(true);
+                expect(iceServerPool.serverTiers.has(3)).toBe(true);
+                expect(iceServerPool.serverTiers.has(4)).toBe(true);
+            });
+            
+            test('should return default configuration for tier 1', () => {
+                const config = iceServerPool.getDefaultConfiguration();
+                expect(config.tier).toBe(1);
+                expect(Array.isArray(config.iceServers)).toBe(true);
+                expect(config.iceServers.length).toBeGreaterThan(0);
+                expect(config.iceServers[0].urls).toContain('stun.l.google.com');
+                expect(typeof config.description).toBe('string');
+            });
+            
+            test('should return fallback configuration for tier 2', () => {
+                const config = iceServerPool.getFallbackConfiguration();
+                expect(config.tier).toBe(2);
+                expect(Array.isArray(config.iceServers)).toBe(true);
+                expect(config.iceServers.length).toBeGreaterThan(2); // Should include tier 1 + tier 2
+                expect(typeof config.description).toBe('string');
+            });
+            
+            test('should return TURN configuration for tier 3', () => {
+                const config = iceServerPool.getTURNConfiguration();
+                expect(config.tier).toBe(3);
+                expect(Array.isArray(config.iceServers)).toBe(true);
+                expect(config.iceServers.length).toBeGreaterThan(1);
+                
+                // Should include at least one TURN server
+                const hasTurnServer = config.iceServers.some(server => 
+                    server.type === 'turn' || server.urls.startsWith('turn:')
+                );
+                expect(hasTurnServer).toBe(true);
+            });
+            
+            test('should return premium configuration for tier 4', () => {
+                const config = iceServerPool.getPremiumConfiguration();
+                expect(config.tier).toBe(4);
+                expect(config.requiresConfiguration).toBe(true);
+                expect(typeof config.guidance).toBe('string');
+                expect(config.guidance).toContain('Premium TURN services');
+            });
+            
+            test('should get configuration for specific tier', () => {
+                const tier1Config = iceServerPool.getConfigurationForTier(1);
+                expect(tier1Config.tier).toBe(1);
+                
+                const tier2Config = iceServerPool.getConfigurationForTier(2);
+                expect(tier2Config.tier).toBe(2);
+                
+                const tier3Config = iceServerPool.getConfigurationForTier(3);
+                expect(tier3Config.tier).toBe(3);
+                
+                const tier4Config = iceServerPool.getConfigurationForTier(4);
+                expect(tier4Config.tier).toBe(4);
+                
+                // Invalid tier should return default
+                const invalidConfig = iceServerPool.getConfigurationForTier(99);
+                expect(invalidConfig.tier).toBe(1);
+            });
+            
+            test('should get next tier for fallback', () => {
+                expect(iceServerPool.getNextTier(1)).toBe(2);
+                expect(iceServerPool.getNextTier(2)).toBe(3);
+                expect(iceServerPool.getNextTier(3)).toBe(4);
+                expect(iceServerPool.getNextTier(4)).toBeNull();
+            });
+            
+            test('should reset health status', () => {
+                // Set some health status first
+                const tier1 = iceServerPool.serverTiers.get(1);
+                tier1.healthStatus = 'healthy';
+                tier1.lastHealthCheck = new Date();
+                
+                iceServerPool.resetHealthStatus();
+                
+                expect(tier1.healthStatus).toBe('unknown');
+                expect(tier1.lastHealthCheck).toBeNull();
+            });
+            
+            test('should get health status summary', () => {
+                const status = iceServerPool.getHealthStatus();
+                expect(typeof status.timestamp).toBe('object');
+                expect(typeof status.tiers).toBe('object');
+                expect(status.tiers[1]).not.toBeNull();
+                expect(status.tiers[2]).not.toBeNull();
+                expect(status.tiers[3]).not.toBeNull();
+                expect(status.tiers[4]).not.toBeNull();
+                
+                expect(typeof status.tiers[1].name).toBe('string');
+                expect(typeof status.tiers[1].healthStatus).toBe('string');
+                expect(typeof status.tiers[1].description).toBe('string');
+            });
+        });
+        
+        describe('ICE Server Pool Health Checking Tests', () => {
+            test('should have health checking methods defined', () => {
+                expect(typeof iceServerPool.validateServerHealth).toBe('function');
+                expect(typeof iceServerPool.startHealthChecking).toBe('function');
+                expect(typeof iceServerPool.stopHealthChecking).toBe('function');
+                expect(typeof iceServerPool.runHealthChecks).toBe('function');
+            });
+            
+            test('should start and stop health checking', () => {
+                // Start health checking
+                iceServerPool.startHealthChecking();
+                expect(iceServerPool.healthCheckTimer).not.toBeNull();
+                
+                // Stop health checking
+                iceServerPool.stopHealthChecking();
+                expect(iceServerPool.healthCheckTimer).toBeNull();
+            });
+            
+            asyncTest('should validate server health for tier 1', () => {
+                iceServerPool.validateServerHealth(1).then(isHealthy => {
+                    expect(typeof isHealthy).toBe('boolean');
+                    
+                    const tier1 = iceServerPool.serverTiers.get(1);
+                    expect(['healthy', 'failed']).toContain(tier1.healthStatus);
+                    expect(tier1.lastHealthCheck).not.toBeNull();
+                    expect(typeof tier1.responseTime).toBe('number');
+                });
+            }, 6000);
+            
+            asyncTest('should validate server health for tier 2', () => {
+                iceServerPool.validateServerHealth(2).then(isHealthy => {
+                    expect(typeof isHealthy).toBe('boolean');
+                    
+                    const tier2 = iceServerPool.serverTiers.get(2);
+                    expect(['healthy', 'failed']).toContain(tier2.healthStatus);
+                    expect(tier2.lastHealthCheck).not.toBeNull();
+                });
+            }, 6000);
+            
+            asyncTest('should run health checks for all tiers', () => {
+                iceServerPool.runHealthChecks().then(healthResults => {
+                    expect(healthResults instanceof Map).toBe(true);
+                    expect(healthResults.size).toBe(3); // Tiers 1-3
+                    
+                    for (const [tier, isHealthy] of healthResults) {
+                        expect(typeof tier).toBe('number');
+                        expect(typeof isHealthy).toBe('boolean');
+                        expect(tier).toBeGreaterThanOrEqual(1);
+                        expect(tier).toBeLessThanOrEqual(3);
+                    }
+                });
+            }, 10000);
+            
+            test('should handle invalid tier in health validation', () => {
+                iceServerPool.validateServerHealth(99).then(result => {
+                    expect(result).toBe(false);
+                });
+            });
+            
+            test('should have proper health check configuration', () => {
+                expect(typeof iceServerPool.healthCheckTimeout).toBe('number');
+                expect(typeof iceServerPool.healthCheckInterval).toBe('number');
+                expect(iceServerPool.healthCheckTimeout).toBeGreaterThan(0);
+                expect(iceServerPool.healthCheckInterval).toBeGreaterThan(0);
+            });
+        });
+        
+        describe('ICE Server Pool Integration Tests', () => {
+            test('should integrate with existing CONFIG', () => {
+                const defaultConfig = iceServerPool.getDefaultConfiguration();
+                const tier1Servers = defaultConfig.iceServers;
+                
+                // Should include the original STUN server from CONFIG
+                const hasOriginalStun = tier1Servers.some(server => 
+                    server.urls === CONFIG.STUN_SERVER
+                );
+                expect(hasOriginalStun).toBe(true);
+            });
+            
+            test('should provide server configurations for PeerJS', () => {
+                const config = iceServerPool.getDefaultConfiguration();
+                
+                // Should be compatible with PeerJS RTCConfiguration format
+                expect(Array.isArray(config.iceServers)).toBe(true);
+                config.iceServers.forEach(server => {
+                    expect(typeof server.urls).toBe('string');
+                    expect(server.urls.startsWith('stun:') || server.urls.startsWith('turn:')).toBe(true);
+                });
+            });
+            
+            test('should handle TURN server credentials properly', () => {
+                const turnConfig = iceServerPool.getTURNConfiguration();
+                const turnServers = turnConfig.iceServers.filter(server => 
+                    server.type === 'turn' || server.urls.startsWith('turn:')
+                );
+                
+                turnServers.forEach(server => {
+                    if (server.type === 'turn') {
+                        expect(typeof server.username).toBe('string');
+                        expect(typeof server.credential).toBe('string');
+                        expect(server.username.length).toBeGreaterThan(0);
+                        expect(server.credential.length).toBeGreaterThan(0);
+                    }
+                });
+            });
+            
+            test('should maintain server tier priorities', () => {
+                for (let tier = 1; tier <= 4; tier++) {
+                    const tierConfig = iceServerPool.serverTiers.get(tier);
+                    expect(tierConfig.priority).toBe(tier);
+                }
+            });
+            
+            test('should provide meaningful server descriptions', () => {
+                for (let tier = 1; tier <= 4; tier++) {
+                    const tierConfig = iceServerPool.serverTiers.get(tier);
+                    expect(typeof tierConfig.description).toBe('string');
+                    expect(tierConfig.description.length).toBeGreaterThan(10);
+                    expect(typeof tierConfig.name).toBe('string');
+                    expect(tierConfig.name.length).toBeGreaterThan(0);
+                }
+            });
+        });
+        
         // ===== INITIAL FAILING TESTS =====
         
         describe('DOM Element Existence Tests', () => {
@@ -4408,6 +4638,342 @@
             PERFORMANCE_MONITORING: true
         };
         
+        // ===== ICE SERVER CONFIGURATION SYSTEM =====
+        
+        /**
+         * ICE Server Pool class for managing tiered server configurations
+         * Implements health checking and automatic server selection
+         */
+        class ICEServerPool {
+            constructor() {
+                this.serverTiers = new Map([
+                    [1, {
+                        name: 'Google STUN Servers',
+                        servers: [
+                            { urls: 'stun:stun.l.google.com:19302', type: 'stun' },
+                            { urls: 'stun:stun1.l.google.com:19302', type: 'stun' }
+                        ],
+                        priority: 1,
+                        healthStatus: 'unknown',
+                        lastHealthCheck: null,
+                        description: 'Fast, reliable, free STUN servers'
+                    }],
+                    [2, {
+                        name: 'Alternative STUN Servers',
+                        servers: [
+                            { urls: 'stun:stun.stunprotocol.org:3478', type: 'stun' },
+                            { urls: 'stun:stun.services.mozilla.com', type: 'stun' }
+                        ],
+                        priority: 2,
+                        healthStatus: 'unknown',
+                        lastHealthCheck: null,
+                        description: 'Backup STUN servers for redundancy'
+                    }],
+                    [3, {
+                        name: 'Free TURN Servers',
+                        servers: [
+                            { 
+                                urls: 'turn:openrelay.metered.ca:80',
+                                username: 'openrelayproject',
+                                credential: 'openrelayproject',
+                                type: 'turn'
+                            }
+                        ],
+                        priority: 3,
+                        healthStatus: 'unknown',
+                        lastHealthCheck: null,
+                        description: 'Limited bandwidth relay servers'
+                    }],
+                    [4, {
+                        name: 'Premium TURN Services',
+                        servers: [],
+                        priority: 4,
+                        healthStatus: 'unknown',
+                        lastHealthCheck: null,
+                        description: 'High-quality relay with user guidance',
+                        requiresConfiguration: true
+                    }]
+                ]);
+                
+                this.healthCheckTimeout = 5000; // 5 seconds
+                this.healthCheckInterval = 300000; // 5 minutes
+                this.healthCheckTimer = null;
+                this.currentTier = 1;
+            }
+            
+            /**
+             * Get the default ICE server configuration (Tier 1)
+             * @returns {Object} ICE server configuration object
+             */
+            getDefaultConfiguration() {
+                const tier1 = this.serverTiers.get(1);
+                return {
+                    iceServers: tier1.servers,
+                    tier: 1,
+                    description: tier1.description
+                };
+            }
+            
+            /**
+             * Get fallback ICE server configuration (Tier 2)
+             * @returns {Object} ICE server configuration object
+             */
+            getFallbackConfiguration() {
+                const tier2 = this.serverTiers.get(2);
+                return {
+                    iceServers: [...this.serverTiers.get(1).servers, ...tier2.servers],
+                    tier: 2,
+                    description: tier2.description
+                };
+            }
+            
+            /**
+             * Get TURN relay configuration (Tier 3)
+             * @returns {Object} ICE server configuration object
+             */
+            getTURNConfiguration() {
+                const tier3 = this.serverTiers.get(3);
+                const tier1 = this.serverTiers.get(1);
+                return {
+                    iceServers: [...tier1.servers, ...tier3.servers],
+                    tier: 3,
+                    description: tier3.description
+                };
+            }
+            
+            /**
+             * Get configuration for a specific tier
+             * @param {number} tier - The tier number (1-4)
+             * @returns {Object} ICE server configuration object
+             */
+            getConfigurationForTier(tier) {
+                switch (tier) {
+                    case 1:
+                        return this.getDefaultConfiguration();
+                    case 2:
+                        return this.getFallbackConfiguration();
+                    case 3:
+                        return this.getTURNConfiguration();
+                    case 4:
+                        return this.getPremiumConfiguration();
+                    default:
+                        return this.getDefaultConfiguration();
+                }
+            }
+            
+            /**
+             * Get premium TURN configuration (Tier 4)
+             * @returns {Object} ICE server configuration object
+             */
+            getPremiumConfiguration() {
+                const tier4 = this.serverTiers.get(4);
+                return {
+                    iceServers: [],
+                    tier: 4,
+                    description: tier4.description,
+                    requiresConfiguration: true,
+                    guidance: 'Premium TURN services require configuration. Consider services like Twilio, Xirsys, or AWS.'
+                };
+            }
+            
+            /**
+             * Validate server health by testing connectivity
+             * @param {number} tier - The tier to validate
+             * @returns {Promise<boolean>} Promise resolving to health status
+             */
+            async validateServerHealth(tier = 1) {
+                const tierConfig = this.serverTiers.get(tier);
+                if (!tierConfig) {
+                    return false;
+                }
+                
+                const startTime = Date.now();
+                
+                try {
+                    // Create a test RTCPeerConnection with the tier's servers
+                    const testPc = new RTCPeerConnection({
+                        iceServers: tierConfig.servers
+                    });
+                    
+                    let candidatesFound = false;
+                    let healthCheckComplete = false;
+                    
+                    // Set up ICE candidate gathering test
+                    const healthPromise = new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            if (!healthCheckComplete) {
+                                healthCheckComplete = true;
+                                testPc.close();
+                                resolve(false);
+                            }
+                        }, this.healthCheckTimeout);
+                        
+                        testPc.onicecandidate = (event) => {
+                            if (event.candidate) {
+                                candidatesFound = true;
+                                // For STUN servers, look for srflx candidates
+                                if (tier <= 2 && event.candidate.candidate.includes('srflx')) {
+                                    if (!healthCheckComplete) {
+                                        healthCheckComplete = true;
+                                        clearTimeout(timeout);
+                                        testPc.close();
+                                        resolve(true);
+                                    }
+                                }
+                                // For TURN servers, look for relay candidates
+                                else if (tier >= 3 && event.candidate.candidate.includes('relay')) {
+                                    if (!healthCheckComplete) {
+                                        healthCheckComplete = true;
+                                        clearTimeout(timeout);
+                                        testPc.close();
+                                        resolve(true);
+                                    }
+                                }
+                            } else if (candidatesFound && !healthCheckComplete) {
+                                // ICE gathering complete, resolve based on what we found
+                                healthCheckComplete = true;
+                                clearTimeout(timeout);
+                                testPc.close();
+                                resolve(candidatesFound);
+                            }
+                        };
+                        
+                        testPc.onicegatheringstatechange = () => {
+                            if (testPc.iceGatheringState === 'complete' && !healthCheckComplete) {
+                                healthCheckComplete = true;
+                                clearTimeout(timeout);
+                                testPc.close();
+                                resolve(candidatesFound);
+                            }
+                        };
+                    });
+                    
+                    // Create a data channel to trigger ICE gathering
+                    testPc.createDataChannel('health-check');
+                    const offer = await testPc.createOffer();
+                    await testPc.setLocalDescription(offer);
+                    
+                    const isHealthy = await healthPromise;
+                    const responseTime = Date.now() - startTime;
+                    
+                    // Update tier health status
+                    tierConfig.healthStatus = isHealthy ? 'healthy' : 'failed';
+                    tierConfig.lastHealthCheck = new Date();
+                    tierConfig.responseTime = responseTime;
+                    
+                    return isHealthy;
+                    
+                } catch (error) {
+                    console.error(`Health check failed for tier ${tier}:`, error);
+                    tierConfig.healthStatus = 'failed';
+                    tierConfig.lastHealthCheck = new Date();
+                    tierConfig.error = error.message;
+                    return false;
+                }
+            }
+            
+            /**
+             * Start periodic health checking for all tiers
+             */
+            startHealthChecking() {
+                if (this.healthCheckTimer) {
+                    clearInterval(this.healthCheckTimer);
+                }
+                
+                // Initial health check
+                this.runHealthChecks();
+                
+                // Set up periodic health checks
+                this.healthCheckTimer = setInterval(() => {
+                    this.runHealthChecks();
+                }, this.healthCheckInterval);
+            }
+            
+            /**
+             * Stop periodic health checking
+             */
+            stopHealthChecking() {
+                if (this.healthCheckTimer) {
+                    clearInterval(this.healthCheckTimer);
+                    this.healthCheckTimer = null;
+                }
+            }
+            
+            /**
+             * Run health checks for all configured tiers
+             * @returns {Promise<Map>} Promise resolving to health status map
+             */
+            async runHealthChecks() {
+                const healthResults = new Map();
+                
+                // Check tiers 1-3 (tier 4 requires manual configuration)
+                for (let tier = 1; tier <= 3; tier++) {
+                    try {
+                        const isHealthy = await this.validateServerHealth(tier);
+                        healthResults.set(tier, isHealthy);
+                        
+                        const tierConfig = this.serverTiers.get(tier);
+                        console.log(`Tier ${tier} (${tierConfig.name}): ${isHealthy ? 'Healthy' : 'Failed'}`);
+                        
+                    } catch (error) {
+                        console.error(`Health check error for tier ${tier}:`, error);
+                        healthResults.set(tier, false);
+                    }
+                }
+                
+                return healthResults;
+            }
+            
+            /**
+             * Get the current health status of all tiers
+             * @returns {Object} Health status summary
+             */
+            getHealthStatus() {
+                const status = {
+                    timestamp: new Date(),
+                    tiers: {}
+                };
+                
+                for (const [tier, config] of this.serverTiers) {
+                    status.tiers[tier] = {
+                        name: config.name,
+                        healthStatus: config.healthStatus,
+                        lastHealthCheck: config.lastHealthCheck,
+                        responseTime: config.responseTime,
+                        error: config.error,
+                        description: config.description
+                    };
+                }
+                
+                return status;
+            }
+            
+            /**
+             * Get the next available tier for fallback
+             * @param {number} currentTier - Current tier that failed
+             * @returns {number} Next tier to try
+             */
+            getNextTier(currentTier) {
+                const nextTier = currentTier + 1;
+                return nextTier <= 4 ? nextTier : null;
+            }
+            
+            /**
+             * Reset all health statuses (useful for testing)
+             */
+            resetHealthStatus() {
+                for (const [tier, config] of this.serverTiers) {
+                    config.healthStatus = 'unknown';
+                    config.lastHealthCheck = null;
+                    config.responseTime = null;
+                    config.error = null;
+                }
+            }
+        }
+        
+        // Global ICE server pool instance
+        const iceServerPool = new ICEServerPool();
+        
         // Modern Map for better performance than objects
         const connectionStates = new Map([
             ['disconnected', { indicator: 'status-disconnected', text: 'Disconnected' }],
@@ -5654,6 +6220,13 @@
                 return false;
             }
             
+            // Handle ICE server commands locally
+            if (message.startsWith('/ice')) {
+                handleICECommand(message);
+                messageInput.value = '';
+                return true;
+            }
+            
             // Check if connected using optional chaining
             if (!connection?.open) {
                 addSystemMessage('Not connected to any peer');
@@ -5687,8 +6260,51 @@
          * @param {string} message - The received message text
          */
         const handleReceivedMessage = (message) => {
+            // Check for ICE server test commands
+            if (message.startsWith('/ice')) {
+                handleICECommand(message);
+                return;
+            }
+            
             // Add received message to chat log with "Peer:" prefix
             addMessageToChat(message, 'peer');
+        };
+        
+        /**
+         * Handle ICE server test commands
+         * @param {string} command - The ICE command to process
+         */
+        const handleICECommand = (command) => {
+            const parts = command.split(' ');
+            const subCommand = parts[1];
+            
+            switch (subCommand) {
+                case 'health':
+                    displayICEServerHealth();
+                    break;
+                case 'test':
+                    const tier = parseInt(parts[2]) || 1;
+                    if (tier >= 1 && tier <= 4) {
+                        testICEServerTier(tier);
+                    } else {
+                        addSystemMessage('❌ Invalid tier. Use: /ice test [1-4]');
+                    }
+                    break;
+                case 'reset':
+                    iceServerPool.resetHealthStatus();
+                    addSystemMessage('🔄 ICE server health status reset');
+                    break;
+                case 'help':
+                default:
+                    addSystemMessage('');
+                    addSystemMessage('🧊 ICE Server Commands:');
+                    addSystemMessage('  /ice health - Show health status of all tiers');
+                    addSystemMessage('  /ice test [1-4] - Test specific tier');
+                    addSystemMessage('  /ice reset - Reset health status');
+                    addSystemMessage('  /ice help - Show this help');
+                    addSystemMessage('');
+                    break;
+            }
         };
         
         /**
@@ -5724,6 +6340,83 @@
             }
         };
         
+        // ===== ICE SERVER MANAGEMENT FUNCTIONS =====
+        
+        /**
+         * Get ICE configuration for connection attempt with fallback support
+         * @param {number} tier - The tier to use (1-4)
+         * @returns {Object} ICE server configuration
+         */
+        const getICEConfigurationForTier = (tier = 1) => {
+            const config = iceServerPool.getConfigurationForTier(tier);
+            console.log(`Using ICE server tier ${tier}: ${config.description}`);
+            return config;
+        };
+        
+        /**
+         * Handle ICE server tier fallback when connection fails
+         * @param {number} currentTier - Current tier that failed
+         * @returns {Object|null} Next tier configuration or null if no more tiers
+         */
+        const handleICEServerFallback = (currentTier) => {
+            const nextTier = iceServerPool.getNextTier(currentTier);
+            
+            if (nextTier) {
+                const nextConfig = getICEConfigurationForTier(nextTier);
+                addSystemMessage(`🔄 Falling back to ${nextConfig.description} (Tier ${nextTier})`);
+                return nextConfig;
+            } else {
+                addSystemMessage('❌ All ICE server tiers exhausted');
+                return null;
+            }
+        };
+        
+        /**
+         * Display ICE server health status in the UI
+         */
+        const displayICEServerHealth = () => {
+            const healthStatus = iceServerPool.getHealthStatus();
+            addSystemMessage('');
+            addSystemMessage('🏥 ICE Server Health Status:');
+            
+            for (const [tier, status] of Object.entries(healthStatus.tiers)) {
+                const healthIcon = status.healthStatus === 'healthy' ? '✅' : 
+                                 status.healthStatus === 'failed' ? '❌' : '❓';
+                const responseTime = status.responseTime ? ` (${status.responseTime}ms)` : '';
+                addSystemMessage(`  ${healthIcon} Tier ${tier}: ${status.name}${responseTime}`);
+                
+                if (status.error) {
+                    addSystemMessage(`    ⚠️ Error: ${status.error}`);
+                }
+            }
+            addSystemMessage('');
+        };
+        
+        /**
+         * Test ICE server connectivity for a specific tier
+         * @param {number} tier - The tier to test
+         */
+        const testICEServerTier = async (tier) => {
+            addSystemMessage(`🧪 Testing ICE server tier ${tier}...`);
+            
+            try {
+                const isHealthy = await iceServerPool.validateServerHealth(tier);
+                const tierConfig = iceServerPool.serverTiers.get(tier);
+                const responseTime = tierConfig.responseTime || 'N/A';
+                
+                if (isHealthy) {
+                    addSystemMessage(`✅ Tier ${tier} test passed (${responseTime}ms)`);
+                } else {
+                    addSystemMessage(`❌ Tier ${tier} test failed`);
+                    if (tierConfig.error) {
+                        addSystemMessage(`   Error: ${tierConfig.error}`);
+                    }
+                }
+            } catch (error) {
+                addSystemMessage(`❌ Tier ${tier} test error: ${error.message}`);
+            }
+        };
+        
         // ===== PEERJS INITIALIZATION =====
         
         /**
@@ -5750,12 +6443,11 @@
             validateHTTPSResources();
             
             try {
-                // Enhanced modern configuration using ES2020+ features and Safari 14+ optimizations
+                // Enhanced modern configuration using ICE server pool and ES2020+ features
+                const iceConfig = iceServerPool.getDefaultConfiguration();
                 const peerConfig = {
                     config: {
-                        iceServers: [
-                            { urls: CONFIG.STUN_SERVER }
-                        ],
+                        iceServers: iceConfig.iceServers,
                         // Safari 14+ modern WebRTC optimizations
                         iceCandidatePoolSize: 10,
                         bundlePolicy: 'max-bundle',
@@ -5793,6 +6485,10 @@
                 
                 // Store peer globally for testing using modern assignment
                 Object.assign(window, { peer });
+                
+                // Start ICE server health checking
+                iceServerPool.startHealthChecking();
+                addSystemMessage(`🔧 Using ${iceConfig.description} (Tier ${iceConfig.tier})`);
                 
                 // Modern event handling with arrow functions and optional chaining
                 peer.on('open', (id) => {
