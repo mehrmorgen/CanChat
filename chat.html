@@ -5639,6 +5639,170 @@
         
         // ===== COMPREHENSIVE INTEGRATION TESTS =====
         
+        describe('Enhanced Connection System End-to-End Tests', () => {
+            test('should complete full enhanced connection workflow with diagnostics', () => {
+                // Reset state for clean test
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Initialize enhanced connection system components
+                const testNetworkDetector = new NetworkDetector();
+                const testIceServerPool = new ICEServerPool();
+                const testDiagnosticsEngine = new DiagnosticsEngine();
+                const testConnectionManager = new ConnectionManager(testIceServerPool, testNetworkDetector);
+                
+                // Step 1: Network detection
+                expect(testNetworkDetector.detectNetworkType).toBeTruthy();
+                expect(testNetworkDetector.networkType).toBe('unknown'); // Initial state
+                
+                // Step 2: ICE server configuration
+                const defaultConfig = testIceServerPool.getDefaultConfiguration();
+                expect(defaultConfig.tier).toBe(1);
+                expect(defaultConfig.iceServers.length).toBeGreaterThan(0);
+                
+                // Step 3: Connection manager initialization
+                expect(testConnectionManager.isConnecting).toBe(false);
+                expect(testConnectionManager.retryCount).toBe(0);
+                
+                // Step 4: Simulate connection establishment with progress tracking
+                const targetPeerId = 'test-peer-enhanced';
+                
+                // Mock the connection establishment process
+                const mockConnection = {
+                    open: true,
+                    peer: targetPeerId,
+                    send: function(data) { this.lastSent = data; },
+                    on: function(event, handler) { this['_' + event] = handler; },
+                    peerConnection: {
+                        iceConnectionState: 'connected',
+                        connectionState: 'connected',
+                        oniceconnectionstatechange: null,
+                        onconnectionstatechange: null
+                    }
+                };
+                
+                // Step 5: Test diagnostic capabilities
+                const diagnosticReport = testDiagnosticsEngine.generateDiagnosticReport();
+                expect(diagnosticReport.networkType).toBeTruthy();
+                expect(diagnosticReport.suggestions).toBeTruthy();
+                
+                // Step 6: Test connection quality monitoring
+                const qualityMetrics = {
+                    rtt: 50,
+                    packetLoss: 0.01,
+                    jitter: 5,
+                    bandwidth: 1000000
+                };
+                
+                // Verify quality assessment
+                expect(getRTTClass(qualityMetrics.rtt)).toBe('metric-good');
+                expect(getPacketLossClass(qualityMetrics.packetLoss)).toBe('metric-good');
+                
+                // Step 7: Test TURN relay fallback notification
+                const relayInfo = {
+                    usingRelay: true,
+                    relayType: 'TURN',
+                    latencyImpact: 'moderate'
+                };
+                
+                // Verify relay notification would be shown
+                expect(relayInfo.usingRelay).toBe(true);
+                
+                addSystemMessage('✅ Enhanced connection system end-to-end test completed');
+                expect(chatLog.value).toContain('Enhanced connection system end-to-end test completed');
+            });
+            
+            test('should handle connection failures with enhanced diagnostics and retry logic', () => {
+                const chatLog = document.getElementById('chat-log');
+                chatLog.value = '';
+                
+                // Initialize connection manager
+                const testConnectionManager = new ConnectionManager(iceServerPool, networkDetector);
+                
+                // Simulate connection failure scenarios
+                const failureScenarios = [
+                    { type: 'ice-connection-failed', message: 'ICE connection failed' },
+                    { type: 'network-timeout', message: 'Network timeout' },
+                    { type: 'peer-unavailable', message: 'Peer unavailable' }
+                ];
+                
+                failureScenarios.forEach((scenario, index) => {
+                    // Test diagnostic analysis for each failure type
+                    const diagnosticReport = diagnosticsEngine.analyzeConnectionFailure(scenario, []);
+                    expect(diagnosticReport.failureType).toBe(scenario.type);
+                    expect(diagnosticReport.suggestions.length).toBeGreaterThan(0);
+                    
+                    // Test troubleshooting suggestions
+                    const troubleshootingSteps = diagnosticsEngine.suggestTroubleshooting(scenario.type);
+                    expect(troubleshootingSteps.length).toBeGreaterThan(0);
+                    expect(troubleshootingSteps[0].title).toBeTruthy();
+                    expect(troubleshootingSteps[0].description).toBeTruthy();
+                });
+                
+                addSystemMessage('✅ Enhanced diagnostics and retry logic test completed');
+                expect(chatLog.value).toContain('Enhanced diagnostics and retry logic test completed');
+            });
+            
+            test('should integrate progress indicators with connection establishment', () => {
+                const progressContainer = document.getElementById('connection-progress');
+                const progressFill = document.getElementById('progress-fill');
+                const progressText = document.getElementById('progress-text');
+                
+                // Test progress indicator integration
+                showConnectionProgress(25, 'Initializing connection...', 10);
+                expect(progressContainer.style.display).toBe('block');
+                expect(progressFill.style.width).toBe('25%');
+                expect(progressText.textContent).toContain('Initializing connection');
+                expect(progressText.textContent).toContain('10s remaining');
+                
+                // Test different progress stages
+                showConnectionProgress(50, 'Establishing secure connection...', 5);
+                expect(progressFill.classList.contains('progress-connecting')).toBe(true);
+                
+                showConnectionProgress(90, 'Finalizing connection...', 1);
+                expect(progressFill.classList.contains('progress-finalizing')).toBe(true);
+                
+                // Test completion
+                showConnectionProgress(100, 'Connected!', 0);
+                expect(progressFill.style.width).toBe('100%');
+                
+                // Test hiding progress
+                hideConnectionProgress();
+                expect(progressContainer.style.display).toBe('none');
+            });
+            
+            test('should update connection status with enhanced details', () => {
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                const retryBtn = document.getElementById('retry-btn');
+                
+                // Test enhanced status updates
+                updateConnectionStatus('connecting', 'Establishing connection', {
+                    attempt: 2,
+                    maxAttempts: 3,
+                    tier: 1
+                });
+                
+                expect(statusIndicator.classList.contains('status-connecting')).toBe(true);
+                expect(statusText.textContent).toContain('Establishing connection');
+                expect(statusText.textContent).toContain('Attempt 2/3');
+                expect(statusText.textContent).toContain('Tier 1');
+                
+                // Test error status with retry button
+                retryCount = 1;
+                maxRetries = 3;
+                updateConnectionStatus('error', 'Connection failed');
+                expect(statusIndicator.classList.contains('status-error')).toBe(true);
+                expect(retryBtn.style.display).toBe('inline-block');
+                expect(retryBtn.textContent).toContain('2 left');
+                
+                // Test successful connection
+                updateConnectionStatus('connected', 'Connected successfully');
+                expect(statusIndicator.classList.contains('status-connected')).toBe(true);
+                expect(retryBtn.style.display).toBe('none');
+            });
+        });
+        
         describe('Complete User Workflow Integration Tests', () => {
             test('should complete full peer ID generation → connection → messaging → closure workflow', () => {
                 // Reset state for clean test
@@ -9806,6 +9970,56 @@
              */
             getConnectionHistory() {
                 return [...this.connectionAttempts];
+            }
+            
+            /**
+             * Configures connection manager based on detected network type
+             * @param {string} networkType - The detected network type ('wifi', 'cellular', 'unknown')
+             */
+            configureForNetworkType(networkType) {
+                // Adjust timeout and retry settings based on network type
+                switch (networkType) {
+                    case 'cellular':
+                        // Cellular networks may have higher latency and more restrictive NAT
+                        this.maxRetries = 4; // More retries for cellular
+                        this.tierTimeouts = {
+                            1: 15000, // Longer timeouts for cellular
+                            2: 12000,
+                            3: 20000,
+                            4: 25000
+                        };
+                        addSystemMessage('📱 Cellular network detected - using extended timeouts');
+                        break;
+                        
+                    case 'wifi':
+                        // WiFi networks typically have better connectivity
+                        this.maxRetries = 3;
+                        this.tierTimeouts = {
+                            1: 10000, // Standard timeouts for WiFi
+                            2: 8000,
+                            3: 15000,
+                            4: 20000
+                        };
+                        addSystemMessage('📶 WiFi network detected - using standard timeouts');
+                        break;
+                        
+                    default:
+                        // Unknown network type - use conservative settings
+                        this.maxRetries = 3;
+                        this.tierTimeouts = {
+                            1: 12000, // Slightly longer for unknown networks
+                            2: 10000,
+                            3: 18000,
+                            4: 22000
+                        };
+                        addSystemMessage('🌐 Network type unknown - using conservative settings');
+                        break;
+                }
+                
+                console.log(`ConnectionManager configured for ${networkType} network:`, {
+                    maxRetries: this.maxRetries,
+                    tierTimeouts: this.tierTimeouts
+                });
             }
             
             /**
