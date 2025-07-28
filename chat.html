@@ -2621,6 +2621,465 @@
             }, 3000);
         });
         
+        // ===== DIAGNOSTICS ENGINE TESTS =====
+        
+        describe('DiagnosticsEngine Class Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should create DiagnosticsEngine instance', () => {
+                expect(diagnosticsEngine).not.toBeNull();
+                expect(diagnosticsEngine instanceof DiagnosticsEngine).toBe(true);
+            });
+            
+            test('should initialize with empty arrays and error patterns', () => {
+                expect(Array.isArray(diagnosticsEngine.iceCandidates)).toBe(true);
+                expect(diagnosticsEngine.iceCandidates.length).toBe(0);
+                expect(Array.isArray(diagnosticsEngine.connectionAttempts)).toBe(true);
+                expect(diagnosticsEngine.connectionAttempts.length).toBe(0);
+                expect(Array.isArray(diagnosticsEngine.diagnosticReports)).toBe(true);
+                expect(diagnosticsEngine.diagnosticReports.length).toBe(0);
+                expect(diagnosticsEngine.errorPatterns instanceof Map).toBe(true);
+                expect(diagnosticsEngine.errorPatterns.size).toBeGreaterThan(0);
+            });
+            
+            test('should have all required error patterns', () => {
+                const expectedPatterns = [
+                    'ice-gathering-timeout',
+                    'connectivity-check-failure',
+                    'stun-server-unreachable',
+                    'symmetric-nat',
+                    'firewall-blocking',
+                    'peer-unreachable',
+                    'signaling-server-error'
+                ];
+                
+                expectedPatterns.forEach(pattern => {
+                    expect(diagnosticsEngine.errorPatterns.has(pattern)).toBe(true);
+                    const config = diagnosticsEngine.errorPatterns.get(pattern);
+                    expect(config.pattern).toBeDefined();
+                    expect(config.category).toBeDefined();
+                    expect(config.severity).toBeDefined();
+                    expect(Array.isArray(config.troubleshooting)).toBe(true);
+                });
+            });
+            
+            test('should have all required methods', () => {
+                expect(typeof diagnosticsEngine.logICECandidates).toBe('function');
+                expect(typeof diagnosticsEngine.analyzeConnectionFailure).toBe('function');
+                expect(typeof diagnosticsEngine.generateDiagnosticReport).toBe('function');
+                expect(typeof diagnosticsEngine.suggestTroubleshooting).toBe('function');
+                expect(typeof diagnosticsEngine.getDiagnosticHistory).toBe('function');
+                expect(typeof diagnosticsEngine.clearHistory).toBe('function');
+            });
+        });
+        
+        describe('DiagnosticsEngine ICE Candidate Logging Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should log ICE candidates correctly', () => {
+                const mockCandidates = [
+                    'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host',
+                    'candidate:2 1 UDP 1677729535 203.0.113.1 54401 typ srflx raddr 192.168.1.100 rport 54400',
+                    'candidate:3 1 UDP 16777215 198.51.100.1 3478 typ relay raddr 203.0.113.1 rport 54401'
+                ];
+                
+                const result = diagnosticsEngine.logICECandidates(mockCandidates, 'test-peer');
+                
+                expect(result).toBeDefined();
+                expect(result.peerId).toBe('test-peer');
+                expect(result.candidates.length).toBe(3);
+                expect(typeof result.timestamp).toBe('number');
+                
+                // Check candidate parsing
+                expect(result.candidates[0].type).toBe('host');
+                expect(result.candidates[1].type).toBe('srflx');
+                expect(result.candidates[2].type).toBe('relay');
+                
+                // Check storage
+                expect(diagnosticsEngine.iceCandidates.length).toBe(1);
+                expect(diagnosticsEngine.iceCandidates[0]).toBe(result);
+            });
+            
+            test('should extract candidate information correctly', () => {
+                const hostCandidate = 'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host';
+                const srflxCandidate = 'candidate:2 1 UDP 1677729535 203.0.113.1 54401 typ srflx raddr 192.168.1.100 rport 54400';
+                
+                const result = diagnosticsEngine.logICECandidates([hostCandidate, srflxCandidate]);
+                
+                const hostInfo = result.candidates[0];
+                expect(hostInfo.type).toBe('host');
+                expect(hostInfo.protocol).toBe('udp');
+                expect(hostInfo.address).toBe('192.168.1.100');
+                expect(hostInfo.port).toBe('54400');
+                expect(hostInfo.priority).toBe('2113667326');
+                expect(hostInfo.foundation).toBe('candidate:1');
+                
+                const srflxInfo = result.candidates[1];
+                expect(srflxInfo.type).toBe('srflx');
+                expect(srflxInfo.address).toBe('203.0.113.1');
+                expect(srflxInfo.port).toBe('54401');
+            });
+            
+            test('should handle empty candidate arrays', () => {
+                const result = diagnosticsEngine.logICECandidates([]);
+                
+                expect(result.candidates.length).toBe(0);
+                expect(result.peerId).toBe('unknown');
+                expect(diagnosticsEngine.iceCandidates.length).toBe(1);
+            });
+            
+            test('should handle malformed candidates gracefully', () => {
+                const malformedCandidates = [
+                    'invalid candidate string',
+                    'candidate:1 malformed',
+                    ''
+                ];
+                
+                const result = diagnosticsEngine.logICECandidates(malformedCandidates);
+                
+                expect(result.candidates.length).toBe(3);
+                result.candidates.forEach(candidate => {
+                    expect(candidate.type).toBeDefined();
+                    expect(candidate.protocol).toBeDefined();
+                    expect(candidate.address).toBeDefined();
+                });
+            });
+        });
+        
+        describe('DiagnosticsEngine Connection Failure Analysis Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should analyze ICE gathering timeout error', () => {
+                const error = new Error('ICE gathering timeout - no candidates found');
+                const candidates = [];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('ICE_GATHERING');
+                expect(analysis.severity).toBe('high');
+                expect(analysis.troubleshootingSteps.length).toBeGreaterThan(0);
+                expect(analysis.candidateAnalysis.total).toBe(0);
+                expect(analysis.candidateAnalysis.hasOnlyHostCandidates).toBe(false);
+            });
+            
+            test('should analyze connectivity check failure', () => {
+                const error = new Error('Connectivity check failed for all candidates');
+                const candidates = [
+                    'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host',
+                    'candidate:2 1 UDP 1677729535 203.0.113.1 54401 typ srflx raddr 192.168.1.100 rport 54400'
+                ];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('CONNECTIVITY');
+                expect(analysis.severity).toBe('high');
+                expect(analysis.candidateAnalysis.total).toBe(2);
+                expect(analysis.candidateAnalysis.hasHostCandidates).toBe(true);
+                expect(analysis.candidateAnalysis.hasSrflxCandidates).toBe(true);
+            });
+            
+            test('should analyze STUN server unreachable error', () => {
+                const error = new Error('STUN server unreachable - timeout occurred');
+                const candidates = ['candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host'];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('STUN_SERVER');
+                expect(analysis.severity).toBe('medium');
+                expect(analysis.troubleshootingSteps).toContain('Try alternative STUN servers');
+            });
+            
+            test('should analyze symmetric NAT scenario', () => {
+                const error = new Error('Symmetric NAT detected - direct connection impossible');
+                const candidates = [
+                    'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host'
+                ];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('NAT_TYPE');
+                expect(analysis.severity).toBe('high');
+                expect(analysis.troubleshootingSteps).toContain('TURN relay server required for connection');
+            });
+            
+            test('should analyze firewall blocking scenario', () => {
+                const error = new Error('Firewall blocking WebRTC connections');
+                const candidates = [];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('FIREWALL');
+                expect(analysis.severity).toBe('high');
+                expect(analysis.troubleshootingSteps).toContain('Check corporate firewall settings');
+            });
+            
+            test('should detect host-only candidates scenario', () => {
+                const error = new Error('Connection failed');
+                const candidates = [
+                    'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host',
+                    'candidate:2 1 UDP 2113667325 192.168.1.101 54401 typ host'
+                ];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('NAT_TRAVERSAL');
+                expect(analysis.severity).toBe('high');
+                expect(analysis.candidateAnalysis.hasOnlyHostCandidates).toBe(true);
+                expect(analysis.troubleshootingSteps).toContain('Only local candidates found - NAT traversal failed');
+            });
+            
+            test('should handle unknown error patterns', () => {
+                const error = new Error('Some unknown error occurred');
+                const candidates = [];
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(analysis.failureCategory).toBe('ICE_GATHERING'); // Falls back due to no candidates
+                expect(analysis.errorMessage).toBe('Some unknown error occurred');
+                expect(analysis.technicalDetails.userAgent).toBe(navigator.userAgent);
+            });
+            
+            test('should store connection attempts', () => {
+                const error = new Error('Test error');
+                const candidates = [];
+                
+                diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                
+                expect(diagnosticsEngine.connectionAttempts.length).toBe(1);
+                expect(diagnosticsEngine.connectionAttempts[0].errorMessage).toBe('Test error');
+            });
+        });
+        
+        describe('DiagnosticsEngine Report Generation Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should generate diagnostic report from analysis', () => {
+                const error = new Error('ICE gathering timeout');
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(report.id).toMatch(/^diag-\d+$/);
+                expect(report.timestamp).toBe(analysis.timestamp);
+                expect(report.title).toBe('ICE Candidate Gathering Failed');
+                expect(report.summary).toContain('Unable to gather ICE candidates');
+                expect(report.severity).toBe('high');
+                expect(report.category).toBe('ICE_GATHERING');
+                expect(Array.isArray(report.userFriendlySteps)).toBe(true);
+                expect(report.technicalInfo).toBeDefined();
+                expect(Array.isArray(report.recommendations)).toBe(true);
+            });
+            
+            test('should generate user-friendly steps with difficulty levels', () => {
+                const error = new Error('Connectivity check failed');
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                report.userFriendlySteps.forEach(step => {
+                    expect(typeof step.step).toBe('number');
+                    expect(typeof step.description).toBe('string');
+                    expect(['easy', 'medium', 'advanced']).toContain(step.difficulty);
+                    expect(['network', 'server', 'peer', 'general']).toContain(step.category);
+                });
+            });
+            
+            test('should include technical information in report', () => {
+                const error = new Error('Test error');
+                const candidates = ['candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host'];
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates);
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(report.technicalInfo.errorMessage).toBe('Test error');
+                expect(report.technicalInfo.candidateTypes).toBeDefined();
+                expect(report.technicalInfo.networkType).toBeDefined();
+                expect(typeof report.technicalInfo.stunConnectivity).toBe('boolean');
+            });
+            
+            test('should generate appropriate recommendations', () => {
+                const error = new Error('Critical connection failure');
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                analysis.severity = 'high';
+                analysis.candidateAnalysis.hasOnlyHostCandidates = true;
+                analysis.networkDiagnostics.retryCount = 3;
+                
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(report.recommendations.length).toBeGreaterThan(0);
+                expect(report.recommendations.some(r => r.type === 'immediate')).toBe(true);
+                expect(report.recommendations.some(r => r.type === 'technical')).toBe(true);
+                expect(report.recommendations.some(r => r.type === 'user')).toBe(true);
+            });
+            
+            test('should store diagnostic reports', () => {
+                const error = new Error('Test error');
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(diagnosticsEngine.diagnosticReports.length).toBe(1);
+                expect(diagnosticsEngine.diagnosticReports[0]).toBe(report);
+            });
+        });
+        
+        describe('DiagnosticsEngine Troubleshooting Suggestions Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should provide troubleshooting for known failure types', () => {
+                const suggestions = diagnosticsEngine.suggestTroubleshooting('ice-gathering-timeout');
+                
+                expect(Array.isArray(suggestions)).toBe(true);
+                expect(suggestions.length).toBeGreaterThan(0);
+                expect(suggestions).toContain('Check if STUN servers are accessible');
+            });
+            
+            test('should provide default troubleshooting for unknown failure types', () => {
+                const suggestions = diagnosticsEngine.suggestTroubleshooting('unknown-failure-type');
+                
+                expect(Array.isArray(suggestions)).toBe(true);
+                expect(suggestions.length).toBeGreaterThan(0);
+                expect(suggestions).toContain('Check your internet connection');
+            });
+            
+            test('should provide specific troubleshooting for each error pattern', () => {
+                const patterns = [
+                    'ice-gathering-timeout',
+                    'connectivity-check-failure',
+                    'stun-server-unreachable',
+                    'symmetric-nat',
+                    'firewall-blocking',
+                    'peer-unreachable',
+                    'signaling-server-error'
+                ];
+                
+                patterns.forEach(pattern => {
+                    const suggestions = diagnosticsEngine.suggestTroubleshooting(pattern);
+                    expect(suggestions.length).toBeGreaterThan(0);
+                    expect(suggestions.every(s => typeof s === 'string')).toBe(true);
+                });
+            });
+        });
+        
+        describe('DiagnosticsEngine History Management Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should return diagnostic history in reverse chronological order', () => {
+                // Generate multiple reports
+                for (let i = 0; i < 5; i++) {
+                    const error = new Error(`Test error ${i}`);
+                    const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                    diagnosticsEngine.generateDiagnosticReport(analysis);
+                }
+                
+                const history = diagnosticsEngine.getDiagnosticHistory();
+                
+                expect(history.length).toBe(5);
+                // Should be in reverse chronological order (newest first)
+                for (let i = 0; i < history.length - 1; i++) {
+                    expect(history[i].timestamp).toBeGreaterThanOrEqual(history[i + 1].timestamp);
+                }
+            });
+            
+            test('should limit history results when requested', () => {
+                // Generate more reports than limit
+                for (let i = 0; i < 10; i++) {
+                    const error = new Error(`Test error ${i}`);
+                    const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                    diagnosticsEngine.generateDiagnosticReport(analysis);
+                }
+                
+                const limitedHistory = diagnosticsEngine.getDiagnosticHistory(3);
+                
+                expect(limitedHistory.length).toBe(3);
+            });
+            
+            test('should clear all history when requested', () => {
+                // Generate some data
+                diagnosticsEngine.logICECandidates(['candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host']);
+                const error = new Error('Test error');
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, []);
+                diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(diagnosticsEngine.iceCandidates.length).toBe(1);
+                expect(diagnosticsEngine.connectionAttempts.length).toBe(1);
+                expect(diagnosticsEngine.diagnosticReports.length).toBe(1);
+                
+                diagnosticsEngine.clearHistory();
+                
+                expect(diagnosticsEngine.iceCandidates.length).toBe(0);
+                expect(diagnosticsEngine.connectionAttempts.length).toBe(0);
+                expect(diagnosticsEngine.diagnosticReports.length).toBe(0);
+            });
+        });
+        
+        describe('DiagnosticsEngine Integration Tests', () => {
+            let diagnosticsEngine;
+            
+            beforeEach(() => {
+                diagnosticsEngine = new DiagnosticsEngine();
+            });
+            
+            test('should work with real-world ICE candidate formats', () => {
+                const realCandidates = [
+                    'candidate:842163049 1 udp 1677729535 203.0.113.1 54400 typ srflx raddr 192.168.1.100 rport 54400 generation 0 ufrag 4ZcD network-cost 999',
+                    'candidate:842163049 2 udp 1677729534 203.0.113.1 54401 typ srflx raddr 192.168.1.100 rport 54401 generation 0 ufrag 4ZcD network-cost 999',
+                    'candidate:1467250027 1 tcp 1518280447 203.0.113.1 9 typ srflx raddr 192.168.1.100 rport 9 tcptype active generation 0 ufrag 4ZcD network-cost 999'
+                ];
+                
+                const result = diagnosticsEngine.logICECandidates(realCandidates, 'real-peer');
+                
+                expect(result.candidates.length).toBe(3);
+                expect(result.candidates.every(c => c.type === 'srflx')).toBe(true);
+                expect(result.candidates[0].protocol).toBe('udp');
+                expect(result.candidates[2].protocol).toBe('tcp');
+            });
+            
+            test('should provide comprehensive analysis for complex failure scenarios', () => {
+                const error = new Error('ICE connection failed: connectivity checks failed for all candidate pairs');
+                const candidates = [
+                    'candidate:1 1 UDP 2113667326 192.168.1.100 54400 typ host',
+                    'candidate:2 1 UDP 1677729535 203.0.113.1 54401 typ srflx raddr 192.168.1.100 rport 54400'
+                ];
+                const connectionInfo = {
+                    networkType: 'cellular',
+                    stunConnectivity: true,
+                    turnConnectivity: false,
+                    connectionTime: 15000,
+                    retryCount: 2
+                };
+                
+                const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates, connectionInfo);
+                const report = diagnosticsEngine.generateDiagnosticReport(analysis);
+                
+                expect(analysis.failureCategory).toBe('CONNECTIVITY');
+                expect(analysis.networkDiagnostics.networkType).toBe('cellular');
+                expect(analysis.networkDiagnostics.retryCount).toBe(2);
+                expect(report.recommendations.length).toBeGreaterThan(0);
+                expect(report.userFriendlySteps.length).toBeGreaterThan(0);
+            });
+        });
+        
         // ===== NETWORK DETECTOR TESTS =====
         
         describe('Network Detection Tests', () => {
@@ -6004,6 +6463,9 @@
         // Global network detector instance
         const networkDetector = new NetworkDetector();
         
+        // Global diagnostics engine instance
+        const diagnosticsEngine = new DiagnosticsEngine();
+        
         // Modern Map for better performance than objects
         const connectionStates = new Map([
             ['disconnected', { indicator: 'status-disconnected', text: 'Disconnected' }],
@@ -6558,6 +7020,86 @@
             }
         ];
         
+        /**
+         * Shows enhanced diagnostics from DiagnosticsEngine
+         * @param {Object} diagnosticReport - Diagnostic report from DiagnosticsEngine
+         */
+        const showEnhancedDiagnostics = (diagnosticReport) => {
+            if (!diagnosticReport) return;
+            
+            // Add diagnostic report summary to chat
+            addSystemMessage('');
+            addSystemMessage(`🔍 Diagnostic Analysis: ${diagnosticReport.title}`);
+            addSystemMessage(`📋 ${diagnosticReport.summary}`);
+            
+            // Show user-friendly troubleshooting steps
+            if (diagnosticReport.userFriendlySteps.length > 0) {
+                addSystemMessage('');
+                addSystemMessage('🛠️ Recommended Actions:');
+                diagnosticReport.userFriendlySteps.forEach((step, index) => {
+                    const difficultyIcon = step.difficulty === 'easy' ? '🟢' : 
+                                         step.difficulty === 'medium' ? '🟡' : '🔴';
+                    addSystemMessage(`${difficultyIcon} ${step.step}. ${step.description}`);
+                });
+            }
+            
+            // Show technical information for advanced users
+            if (diagnosticReport.technicalInfo) {
+                addSystemMessage('');
+                addSystemMessage('🔧 Technical Details:');
+                addSystemMessage(`• Error: ${diagnosticReport.technicalInfo.errorMessage}`);
+                
+                if (diagnosticReport.technicalInfo.candidateTypes) {
+                    const candidateTypes = Object.keys(diagnosticReport.technicalInfo.candidateTypes);
+                    if (candidateTypes.length > 0) {
+                        addSystemMessage(`• ICE Candidates: ${candidateTypes.join(', ')}`);
+                    } else {
+                        addSystemMessage('• ICE Candidates: None gathered');
+                    }
+                }
+                
+                addSystemMessage(`• Network Type: ${diagnosticReport.technicalInfo.networkType}`);
+                addSystemMessage(`• STUN Connectivity: ${diagnosticReport.technicalInfo.stunConnectivity ? 'Yes' : 'No'}`);
+            }
+            
+            // Show recommendations
+            if (diagnosticReport.recommendations.length > 0) {
+                addSystemMessage('');
+                addSystemMessage('💡 Recommendations:');
+                diagnosticReport.recommendations.forEach(rec => {
+                    const icon = rec.type === 'immediate' ? '🚨' : 
+                               rec.type === 'technical' ? '⚙️' : '👤';
+                    addSystemMessage(`${icon} ${rec.text}`);
+                });
+            }
+            
+            // Update network diagnostics UI with enhanced information
+            const diagnosticsContainer = document.getElementById('network-diagnostics');
+            const diagnosticInfo = document.getElementById('diagnostic-info');
+            
+            if (diagnosticsContainer && diagnosticInfo) {
+                const enhancedDiagnostics = [
+                    {
+                        type: diagnosticReport.severity === 'high' ? 'error' : 
+                              diagnosticReport.severity === 'medium' ? 'warning' : 'success',
+                        message: `${diagnosticReport.title}: ${diagnosticReport.summary}`
+                    },
+                    ...diagnosticReport.userFriendlySteps.slice(0, 3).map(step => ({
+                        type: step.difficulty === 'easy' ? 'success' : 'warning',
+                        message: step.description
+                    }))
+                ];
+                
+                diagnosticInfo.innerHTML = enhancedDiagnostics
+                    .map(({ type, message }) => 
+                        `<div class="diagnostic-item diagnostic-${type}">${message}</div>`
+                    )
+                    .join('');
+                
+                diagnosticsContainer.style.display = 'block';
+            }
+        };
+        
         // ===== INPUT VALIDATION FUNCTIONS =====
         
         /**
@@ -6586,6 +7128,23 @@
                 clearTimeout(connectionTimeout);
                 connectionTimeout = null;
             }
+            
+            // Perform diagnostic analysis using DiagnosticsEngine
+            const candidates = window.lastGatheredCandidates || [];
+            const connectionInfo = {
+                networkType: networkDetector.networkType || 'unknown',
+                stunConnectivity: true, // Assume true unless proven otherwise
+                turnConnectivity: false,
+                connectionTime: Date.now() - (window.connectionStartTime || Date.now()),
+                retryCount: connectionManager ? connectionManager.retryCount : 0
+            };
+            
+            const analysis = diagnosticsEngine.analyzeConnectionFailure(error, candidates, connectionInfo);
+            const diagnosticReport = diagnosticsEngine.generateDiagnosticReport(analysis);
+            
+            // Log diagnostic information for debugging
+            console.log('Connection failure analysis:', analysis);
+            console.log('Diagnostic report:', diagnosticReport);
             
             const errorConfig = new Map([
                 ['peer-unavailable', {
@@ -6655,8 +7214,11 @@
             addSystemMessage('🔧 Troubleshooting Tips:');
             troubleshootingTips.forEach(tip => addSystemMessage(tip));
             
-            // Show network diagnostics
+            // Show network diagnostics from DiagnosticsEngine
             showNetworkDiagnostics(config.diagnostics);
+            
+            // Show enhanced diagnostics from DiagnosticsEngine
+            showEnhancedDiagnostics(diagnosticReport);
             
             // Clean up connection state
             cleanupConnection();
@@ -7639,6 +8201,9 @@
                         // Set up connection event handlers
                         this._setupConnectionHandlers(connection, resolve, reject, attemptInfo);
                         
+                        // Set up ICE candidate logging for diagnostics
+                        this._setupICECandidateLogging(connection, peerId);
+                        
                         updateProgressBar(50);
                         
                     } catch (error) {
@@ -7695,6 +8260,103 @@
                         reject(new Error('Connection closed during establishment'));
                     }
                 });
+            }
+            
+            /**
+             * Sets up ICE candidate logging for diagnostic purposes
+             * @private
+             */
+            _setupICECandidateLogging(connection, peerId) {
+                if (!connection || !connection.peerConnection) {
+                    return;
+                }
+                
+                const pc = connection.peerConnection;
+                const gatheredCandidates = [];
+                
+                // Store candidates globally for error analysis
+                window.lastGatheredCandidates = gatheredCandidates;
+                
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        const candidateString = event.candidate.candidate;
+                        gatheredCandidates.push(candidateString);
+                        
+                        // Log candidate for debugging
+                        console.log(`ICE candidate gathered for ${peerId}:`, candidateString);
+                    } else {
+                        // ICE gathering complete
+                        console.log(`ICE gathering complete for ${peerId}. Total candidates: ${gatheredCandidates.length}`);
+                        
+                        // Log all candidates to DiagnosticsEngine
+                        diagnosticsEngine.logICECandidates(gatheredCandidates, peerId);
+                        
+                        // Show candidate summary in UI
+                        const candidateTypes = this._analyzeCandidateTypes(gatheredCandidates);
+                        addSystemMessage(`🧊 ICE candidates gathered: ${candidateTypes.summary}`);
+                        
+                        if (candidateTypes.hasOnlyHost) {
+                            addSystemMessage('⚠️ Warning: Only local candidates found - NAT traversal may fail');
+                        }
+                    }
+                };
+                
+                // Monitor ICE connection state for diagnostics
+                pc.oniceconnectionstatechange = () => {
+                    const state = pc.iceConnectionState;
+                    console.log(`ICE connection state changed to: ${state}`);
+                    
+                    if (state === 'failed' || state === 'disconnected') {
+                        // Analyze failure with gathered candidates
+                        const error = new Error(`ICE connection ${state}`);
+                        const analysis = diagnosticsEngine.analyzeConnectionFailure(error, gatheredCandidates, {
+                            networkType: this.networkDetector.networkType,
+                            connectionTime: Date.now() - (window.connectionStartTime || Date.now()),
+                            retryCount: this.retryCount
+                        });
+                        
+                        console.log('ICE connection failure analysis:', analysis);
+                    }
+                };
+                
+                // Monitor ICE gathering state
+                pc.onicegatheringstatechange = () => {
+                    const state = pc.iceGatheringState;
+                    console.log(`ICE gathering state changed to: ${state}`);
+                    
+                    if (state === 'complete' && gatheredCandidates.length === 0) {
+                        // No candidates gathered - this is a problem
+                        const error = new Error('ICE gathering completed but no candidates found');
+                        diagnosticsEngine.analyzeConnectionFailure(error, [], {
+                            networkType: this.networkDetector.networkType,
+                            stunConnectivity: false
+                        });
+                    }
+                };
+            }
+            
+            /**
+             * Analyzes candidate types for diagnostic purposes
+             * @private
+             */
+            _analyzeCandidateTypes(candidates) {
+                const types = { host: 0, srflx: 0, relay: 0 };
+                
+                candidates.forEach(candidate => {
+                    if (candidate.includes('typ host')) types.host++;
+                    else if (candidate.includes('typ srflx')) types.srflx++;
+                    else if (candidate.includes('typ relay')) types.relay++;
+                });
+                
+                const total = candidates.length;
+                const hasOnlyHost = types.host > 0 && types.srflx === 0 && types.relay === 0;
+                
+                let summary = `${total} total`;
+                if (types.host > 0) summary += `, ${types.host} host`;
+                if (types.srflx > 0) summary += `, ${types.srflx} srflx`;
+                if (types.relay > 0) summary += `, ${types.relay} relay`;
+                
+                return { types, total, hasOnlyHost, summary };
             }
             
             /**
@@ -7942,6 +8604,477 @@
                 };
             }
         }
+        
+        // ===== DIAGNOSTICS ENGINE =====
+        
+        /**
+         * DiagnosticsEngine class for connection failure analysis and troubleshooting
+         * Implements Requirements 3.1, 3.2, 3.4 from the WebRTC NAT traversal improvement spec
+         */
+        class DiagnosticsEngine {
+            constructor() {
+                this.iceCandidates = [];
+                this.connectionAttempts = [];
+                this.diagnosticReports = [];
+                this.errorPatterns = new Map([
+                    ['ice-gathering-timeout', {
+                        pattern: /ice.*gathering.*timeout|no.*candidates.*found/i,
+                        category: 'ICE_GATHERING',
+                        severity: 'high',
+                        troubleshooting: [
+                            'Check if STUN servers are accessible',
+                            'Verify network connectivity',
+                            'Try connecting from a different network',
+                            'Check firewall settings'
+                        ]
+                    }],
+                    ['connectivity-check-failure', {
+                        pattern: /connectivity.*check.*failed|ice.*connection.*failed/i,
+                        category: 'CONNECTIVITY',
+                        severity: 'high',
+                        troubleshooting: [
+                            'Both peers may be behind symmetric NAT',
+                            'Try using TURN relay servers',
+                            'Check if UDP traffic is blocked',
+                            'Verify ICE server configuration'
+                        ]
+                    }],
+                    ['stun-server-unreachable', {
+                        pattern: /stun.*server.*unreachable|stun.*timeout/i,
+                        category: 'STUN_SERVER',
+                        severity: 'medium',
+                        troubleshooting: [
+                            'Try alternative STUN servers',
+                            'Check DNS resolution',
+                            'Verify internet connectivity',
+                            'Check if UDP port 3478 is blocked'
+                        ]
+                    }],
+                    ['symmetric-nat', {
+                        pattern: /symmetric.*nat|nat.*type.*symmetric/i,
+                        category: 'NAT_TYPE',
+                        severity: 'high',
+                        troubleshooting: [
+                            'TURN relay server required for connection',
+                            'Configure TURN server credentials',
+                            'Consider using premium TURN services',
+                            'Try connecting from different network'
+                        ]
+                    }],
+                    ['firewall-blocking', {
+                        pattern: /firewall.*block|port.*blocked|connection.*refused/i,
+                        category: 'FIREWALL',
+                        severity: 'high',
+                        troubleshooting: [
+                            'Check corporate firewall settings',
+                            'Request WebRTC ports to be opened',
+                            'Try connecting from personal network',
+                            'Use TURN relay as fallback'
+                        ]
+                    }],
+                    ['peer-unreachable', {
+                        pattern: /peer.*not.*found|peer.*unreachable|invalid.*peer.*id/i,
+                        category: 'PEER_DISCOVERY',
+                        severity: 'medium',
+                        troubleshooting: [
+                            'Verify peer ID is correct',
+                            'Check if peer is online',
+                            'Ensure both peers use same signaling server',
+                            'Try refreshing the page'
+                        ]
+                    }],
+                    ['signaling-server-error', {
+                        pattern: /signaling.*server.*error|websocket.*error|server.*disconnected/i,
+                        category: 'SIGNALING',
+                        severity: 'medium',
+                        troubleshooting: [
+                            'Check internet connectivity',
+                            'Try refreshing the page',
+                            'Verify signaling server status',
+                            'Wait and retry connection'
+                        ]
+                    }]
+                ]);
+            }
+            
+            /**
+             * Logs ICE candidates for analysis
+             * @param {Array} candidates - Array of ICE candidates
+             * @param {string} peerId - Associated peer ID
+             */
+            logICECandidates(candidates, peerId = 'unknown') {
+                const candidateLog = {
+                    timestamp: Date.now(),
+                    peerId,
+                    candidates: candidates.map(candidate => ({
+                        type: this._extractCandidateType(candidate),
+                        protocol: this._extractProtocol(candidate),
+                        address: this._extractAddress(candidate),
+                        port: this._extractPort(candidate),
+                        priority: this._extractPriority(candidate),
+                        foundation: this._extractFoundation(candidate),
+                        raw: candidate
+                    }))
+                };
+                
+                this.iceCandidates.push(candidateLog);
+                
+                // Log candidate summary
+                const candidateTypes = candidateLog.candidates.reduce((acc, candidate) => {
+                    acc[candidate.type] = (acc[candidate.type] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                console.log(`ICE Candidates for ${peerId}:`, candidateTypes);
+                
+                return candidateLog;
+            }
+            
+            /**
+             * Analyzes connection failure and generates diagnostic information
+             * @param {Error} error - Connection error object
+             * @param {Array} candidates - ICE candidates that were gathered
+             * @param {Object} connectionInfo - Additional connection information
+             * @returns {Object} Diagnostic analysis result
+             */
+            analyzeConnectionFailure(error, candidates = [], connectionInfo = {}) {
+                const analysis = {
+                    timestamp: Date.now(),
+                    errorMessage: error?.message || 'Unknown error',
+                    errorType: error?.type || 'unknown',
+                    candidateAnalysis: this._analyzeCandidates(candidates),
+                    networkDiagnostics: this._performNetworkDiagnostics(connectionInfo),
+                    failureCategory: 'UNKNOWN',
+                    severity: 'medium',
+                    troubleshootingSteps: [],
+                    technicalDetails: {
+                        userAgent: navigator.userAgent,
+                        timestamp: new Date().toISOString(),
+                        connectionInfo,
+                        candidateCount: candidates.length
+                    }
+                };
+                
+                // Pattern matching for error categorization
+                for (const [patternName, config] of this.errorPatterns) {
+                    if (config.pattern.test(analysis.errorMessage)) {
+                        analysis.failureCategory = config.category;
+                        analysis.severity = config.severity;
+                        analysis.troubleshootingSteps = [...config.troubleshooting];
+                        break;
+                    }
+                }
+                
+                // Additional analysis based on candidates
+                if (candidates.length === 0) {
+                    analysis.failureCategory = 'ICE_GATHERING';
+                    analysis.severity = 'high';
+                    analysis.troubleshootingSteps = [
+                        'No ICE candidates were gathered',
+                        'Check STUN server accessibility',
+                        'Verify network connectivity',
+                        'Check firewall settings'
+                    ];
+                } else if (analysis.candidateAnalysis.hasOnlyHostCandidates) {
+                    analysis.failureCategory = 'NAT_TRAVERSAL';
+                    analysis.severity = 'high';
+                    analysis.troubleshootingSteps = [
+                        'Only local candidates found - NAT traversal failed',
+                        'STUN servers may be blocked',
+                        'Try using TURN relay servers',
+                        'Check UDP connectivity'
+                    ];
+                }
+                
+                this.connectionAttempts.push(analysis);
+                return analysis;
+            }
+            
+            /**
+             * Generates user-friendly diagnostic report
+             * @param {Object} analysis - Analysis result from analyzeConnectionFailure
+             * @returns {Object} User-friendly diagnostic report
+             */
+            generateDiagnosticReport(analysis) {
+                const report = {
+                    id: `diag-${Date.now()}`,
+                    timestamp: analysis.timestamp,
+                    title: this._getReportTitle(analysis.failureCategory),
+                    summary: this._getReportSummary(analysis),
+                    severity: analysis.severity,
+                    category: analysis.failureCategory,
+                    userFriendlySteps: this._generateUserFriendlySteps(analysis),
+                    technicalInfo: {
+                        errorMessage: analysis.errorMessage,
+                        candidateTypes: analysis.candidateAnalysis.types,
+                        networkType: analysis.networkDiagnostics.networkType,
+                        stunConnectivity: analysis.networkDiagnostics.stunConnectivity
+                    },
+                    recommendations: this._generateRecommendations(analysis)
+                };
+                
+                this.diagnosticReports.push(report);
+                return report;
+            }
+            
+            /**
+             * Gets troubleshooting suggestions based on failure type
+             * @param {string} failureType - Type of connection failure
+             * @returns {Array} Array of troubleshooting suggestions
+             */
+            suggestTroubleshooting(failureType) {
+                const config = this.errorPatterns.get(failureType);
+                if (config) {
+                    return [...config.troubleshooting];
+                }
+                
+                // Default troubleshooting steps
+                return [
+                    'Check your internet connection',
+                    'Try refreshing the page',
+                    'Verify the peer ID is correct',
+                    'Try connecting from a different network'
+                ];
+            }
+            
+            /**
+             * Gets diagnostic history
+             * @param {number} limit - Maximum number of reports to return
+             * @returns {Array} Array of diagnostic reports
+             */
+            getDiagnosticHistory(limit = 10) {
+                return this.diagnosticReports
+                    .slice(-limit)
+                    .sort((a, b) => b.timestamp - a.timestamp);
+            }
+            
+            /**
+             * Clears diagnostic history
+             */
+            clearHistory() {
+                this.iceCandidates = [];
+                this.connectionAttempts = [];
+                this.diagnosticReports = [];
+            }
+            
+            /**
+             * Extracts candidate type from ICE candidate string
+             * @private
+             */
+            _extractCandidateType(candidate) {
+                const typeMatch = candidate.match(/typ\s+(\w+)/);
+                return typeMatch ? typeMatch[1] : 'unknown';
+            }
+            
+            /**
+             * Extracts protocol from ICE candidate string
+             * @private
+             */
+            _extractProtocol(candidate) {
+                const protocolMatch = candidate.match(/\s+(udp|tcp)\s+/i);
+                return protocolMatch ? protocolMatch[1].toLowerCase() : 'unknown';
+            }
+            
+            /**
+             * Extracts IP address from ICE candidate string
+             * @private
+             */
+            _extractAddress(candidate) {
+                const addressMatch = candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+                return addressMatch ? addressMatch[1] : 'unknown';
+            }
+            
+            /**
+             * Extracts port from ICE candidate string
+             * @private
+             */
+            _extractPort(candidate) {
+                const parts = candidate.split(' ');
+                return parts.length > 5 ? parts[5] : 'unknown';
+            }
+            
+            /**
+             * Extracts priority from ICE candidate string
+             * @private
+             */
+            _extractPriority(candidate) {
+                const parts = candidate.split(' ');
+                return parts.length > 3 ? parts[3] : 'unknown';
+            }
+            
+            /**
+             * Extracts foundation from ICE candidate string
+             * @private
+             */
+            _extractFoundation(candidate) {
+                const parts = candidate.split(' ');
+                return parts.length > 0 ? parts[0] : 'unknown';
+            }
+            
+            /**
+             * Analyzes ICE candidates for diagnostic purposes
+             * @private
+             */
+            _analyzeCandidates(candidates) {
+                const analysis = {
+                    total: candidates.length,
+                    types: {},
+                    protocols: {},
+                    hasHostCandidates: false,
+                    hasSrflxCandidates: false,
+                    hasRelayCandidates: false,
+                    hasOnlyHostCandidates: false
+                };
+                
+                candidates.forEach(candidate => {
+                    const type = this._extractCandidateType(candidate);
+                    const protocol = this._extractProtocol(candidate);
+                    
+                    analysis.types[type] = (analysis.types[type] || 0) + 1;
+                    analysis.protocols[protocol] = (analysis.protocols[protocol] || 0) + 1;
+                    
+                    if (type === 'host') analysis.hasHostCandidates = true;
+                    if (type === 'srflx') analysis.hasSrflxCandidates = true;
+                    if (type === 'relay') analysis.hasRelayCandidates = true;
+                });
+                
+                analysis.hasOnlyHostCandidates = analysis.hasHostCandidates && 
+                    !analysis.hasSrflxCandidates && !analysis.hasRelayCandidates;
+                
+                return analysis;
+            }
+            
+            /**
+             * Performs network diagnostics
+             * @private
+             */
+            _performNetworkDiagnostics(connectionInfo) {
+                return {
+                    networkType: connectionInfo.networkType || 'unknown',
+                    stunConnectivity: connectionInfo.stunConnectivity !== false,
+                    turnConnectivity: connectionInfo.turnConnectivity !== false,
+                    connectionTime: connectionInfo.connectionTime || 0,
+                    retryCount: connectionInfo.retryCount || 0
+                };
+            }
+            
+            /**
+             * Gets report title based on failure category
+             * @private
+             */
+            _getReportTitle(category) {
+                const titles = {
+                    'ICE_GATHERING': 'ICE Candidate Gathering Failed',
+                    'CONNECTIVITY': 'Connection Establishment Failed',
+                    'STUN_SERVER': 'STUN Server Connectivity Issue',
+                    'NAT_TYPE': 'NAT Traversal Problem',
+                    'FIREWALL': 'Firewall or Network Restriction',
+                    'PEER_DISCOVERY': 'Peer Discovery Issue',
+                    'SIGNALING': 'Signaling Server Problem',
+                    'NAT_TRAVERSAL': 'NAT Traversal Failed'
+                };
+                
+                return titles[category] || 'Connection Problem';
+            }
+            
+            /**
+             * Gets report summary based on analysis
+             * @private
+             */
+            _getReportSummary(analysis) {
+                const summaries = {
+                    'ICE_GATHERING': 'Unable to gather ICE candidates for connection establishment.',
+                    'CONNECTIVITY': 'Connection could not be established despite having candidates.',
+                    'STUN_SERVER': 'STUN servers are not accessible from your network.',
+                    'NAT_TYPE': 'Your network configuration prevents direct peer connections.',
+                    'FIREWALL': 'Network firewall is blocking WebRTC connections.',
+                    'PEER_DISCOVERY': 'Unable to locate or connect to the specified peer.',
+                    'SIGNALING': 'Problem communicating with the signaling server.',
+                    'NAT_TRAVERSAL': 'NAT traversal failed - only local network candidates found.'
+                };
+                
+                return summaries[analysis.failureCategory] || 'An unknown connection problem occurred.';
+            }
+            
+            /**
+             * Generates user-friendly troubleshooting steps
+             * @private
+             */
+            _generateUserFriendlySteps(analysis) {
+                const steps = analysis.troubleshootingSteps.map((step, index) => ({
+                    step: index + 1,
+                    description: step,
+                    difficulty: this._getStepDifficulty(step),
+                    category: this._getStepCategory(step)
+                }));
+                
+                return steps;
+            }
+            
+            /**
+             * Gets step difficulty level
+             * @private
+             */
+            _getStepDifficulty(step) {
+                if (step.includes('refresh') || step.includes('retry') || step.includes('verify')) {
+                    return 'easy';
+                } else if (step.includes('firewall') || step.includes('network') || step.includes('configure')) {
+                    return 'advanced';
+                } else {
+                    return 'medium';
+                }
+            }
+            
+            /**
+             * Gets step category
+             * @private
+             */
+            _getStepCategory(step) {
+                if (step.includes('firewall') || step.includes('network')) {
+                    return 'network';
+                } else if (step.includes('server') || step.includes('TURN') || step.includes('STUN')) {
+                    return 'server';
+                } else if (step.includes('peer') || step.includes('ID')) {
+                    return 'peer';
+                } else {
+                    return 'general';
+                }
+            }
+            
+            /**
+             * Generates recommendations based on analysis
+             * @private
+             */
+            _generateRecommendations(analysis) {
+                const recommendations = [];
+                
+                if (analysis.severity === 'high') {
+                    recommendations.push({
+                        type: 'immediate',
+                        text: 'This is a critical connection issue that requires immediate attention.'
+                    });
+                }
+                
+                if (analysis.candidateAnalysis.hasOnlyHostCandidates) {
+                    recommendations.push({
+                        type: 'technical',
+                        text: 'Consider using TURN relay servers for better connectivity.'
+                    });
+                }
+                
+                if (analysis.networkDiagnostics.retryCount > 2) {
+                    recommendations.push({
+                        type: 'user',
+                        text: 'Multiple connection attempts failed. Try connecting from a different network.'
+                    });
+                }
+                
+                return recommendations;
+            }
+        }
+        
+        // Create global diagnostics engine instance
+        let diagnosticsEngine = null;
         
         // Create global connection manager instance
         let connectionManager = null;
