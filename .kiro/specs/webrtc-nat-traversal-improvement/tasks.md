@@ -72,7 +72,7 @@
   - Commit with the checked off task in the tasks file in a single commit
   - _Requirements: 2.4, 5.2, 5.3_
 
-- [ ] 10. Add testing and validation framework for network scenarios
+- [-] 10. Add testing and validation framework for network scenarios
   - Create network simulation utilities for testing different NAT types
   - Implement automated testing for cross-network connection scenarios
   - Add performance benchmarking for connection establishment times
