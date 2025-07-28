@@ -16,7 +16,7 @@
   - Commit to git
   - _Requirements: 1.1, 2.1, 4.1_
 
-- [ ] 3. Build connection manager with retry logic
+- [x] 3. Build connection manager with retry logic
   - Implement ConnectionManager class with automatic retry mechanisms
   - Add progressive fallback through different ICE server tiers
   - Create connection timeout handling with appropriate timeouts per tier
@@ -24,7 +24,7 @@
   - Commit to git
   - _Requirements: 1.2, 2.1, 4.2_
 
-- [ ] 4. Create comprehensive diagnostics engine
+- [x] 4. Create comprehensive diagnostics engine
   - Implement DiagnosticsEngine class for connection failure analysis
   - Add ICE candidate logging and analysis functionality
   - Create diagnostic report generation with user-friendly error messages
