@@ -58,7 +58,36 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
 
 ## Development
 
+### Development Environment Setup
+
+This application uses cutting-edge JavaScript features (ES2020+) and requires proper IDE configuration for optimal development experience.
+
+#### Quick Setup
+
+1. **Modern Browser**: Use Chrome 88+, Firefox 85+, or Safari 14+
+2. **IDE Configuration**: Configure your IDE for ES2020+ JavaScript support
+3. **HTTPS Server**: Use HTTPS for local development (WebRTC requirement)
+
+#### Detailed IDE Configuration
+
+For comprehensive IDE setup instructions, see [IDE_CONFIGURATION.md](IDE_CONFIGURATION.md) which covers:
+
+- **VS Code**: Settings, extensions, and debugging configuration
+- **WebStorm/IntelliJ**: JavaScript language version and code style setup
+- **Sublime Text**: Package installation and syntax configuration
+- **Common Issues**: Solutions for syntax errors and compatibility problems
+
+#### Environment Detection
+
+The application automatically detects your development environment and provides:
+
+- **Development Mode Indicator**: Visual indicator when running locally
+- **Compatibility Mode Detection**: Automatic detection of ES2020+ support
+- **Environment Information**: Detailed logging of browser and IDE capabilities
+- **Troubleshooting Guidance**: Automatic suggestions for common issues
+
 ### Local Development
+
 ```bash
 # Clone the repository
 git clone https://github.com/mehrmorgen/CanChat.git
@@ -70,6 +99,53 @@ python test_https_server.py
 # Or use any local HTTPS server
 # The application is a single HTML file with no build process
 ```
+
+#### Development Features
+
+When running locally, the application provides additional development features:
+
+- **Environment Indicator**: Shows development mode status in top-right corner
+- **Enhanced Logging**: Detailed console output for debugging
+- **Compatibility Checks**: Automatic validation of modern JavaScript features
+- **IDE Detection**: Identifies your development environment and provides guidance
+
+#### Modern JavaScript Features Used
+
+This application leverages cutting-edge JavaScript features:
+
+- **Optional Chaining** (`?.`): Safe property access
+- **Nullish Coalescing** (`??`): Default value assignment
+- **BigInt**: Large integer support
+- **Private Class Fields** (`#private`): True encapsulation
+- **Promise.allSettled**: Advanced promise handling
+- **Modern Array Methods**: `flatMap`, `structuredClone`
+- **Top-level Await**: Module-level async operations
+
+#### Browser Requirements for Development
+
+- **Chrome 88+** (January 2021) - Recommended for development
+- **Firefox 85+** (January 2021) - Full feature support
+- **Safari 14+** (September 2020) - WebKit compatibility
+- **Edge 88+** (January 2021) - Chromium-based support
+
+#### Troubleshooting Development Issues
+
+**Syntax Errors in IDE**:
+- Update JavaScript language version to ES2020+
+- Install modern JavaScript extensions
+- Configure parser settings for latest features
+
+**WebRTC Not Working Locally**:
+- Use HTTPS (required for WebRTC)
+- Run `python test_https_server.py` for local HTTPS
+- Avoid `file://` protocol for testing
+
+**Modern Features Not Recognized**:
+- Check browser version (must be modern)
+- Verify IDE configuration for ES2020+
+- See [IDE_CONFIGURATION.md](IDE_CONFIGURATION.md) for detailed setup
+
+For more detailed troubleshooting, the application's environment detection system will automatically identify issues and provide specific guidance.
 
 ### Deployment Process
 
