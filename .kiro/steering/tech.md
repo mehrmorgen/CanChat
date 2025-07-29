@@ -4,7 +4,7 @@
 
 - **HTML5**: Single-file application with modern semantic markup
 - **CSS3**: Modern CSS features (Grid, Flexbox, Custom Properties) inline
-- **JavaScript (ES2020+)**: Modern vanilla JavaScript with native modules, async/await
+- **JavaScript (Latest)**: Cutting-edge vanilla JavaScript using the most recent features available in current Firefox, Safari, and Chrome
 - **WebRTC**: Direct peer-to-peer communication via browser APIs
 - **PeerJS**: WebRTC abstraction library for simplified connection management
 
@@ -21,7 +21,7 @@
 - **100% Test Coverage**: Every function and code path must be tested
 - **Single File Architecture**: No build process, bundling, or transpilation
 - **Modern Browser Testing**: Tests run natively in modern browser environments
-- **Progressive Enhancement**: Start with modern features, no legacy fallbacks
+- **Modern-First Development**: Use the latest JavaScript features and browser APIs without any backwards compatibility considerations
 
 ## Common Commands
 
@@ -58,11 +58,13 @@ git commit -m "message"              # Commit with message
 - Copy `chat.html` to any web server or CDN
 - No compilation or build step needed
 - Works with file:// protocol for local testing
+- Works on Github Pages
 
 ## Browser Requirements
 
-- **Modern browsers only**: Chrome 88+, Firefox 85+, Safari 14+ (last 2 major versions)
-- **Native WebRTC support**: No polyfills, shims, or legacy browser compatibility layers
-- **Modern JavaScript**: ES2020+ features used without transpilation or Babel
+- **Latest browsers only**: Current versions of Chrome, Firefox, and Safari (latest stable releases)
+- **Cutting-edge features**: Use the newest JavaScript syntax, WebRTC APIs, and browser capabilities available
+- **No compatibility layers**: Zero polyfills, transpilation, or legacy browser support
+- **Modern APIs only**: Leverage the most recent DOM, Web, and JavaScript APIs
 - **HTTPS required for production**: WebRTC getUserMedia and connection security requirement
-- **Mobile-first responsive**: Recent mobile browser versions prioritized
+- **Mobile-first responsive**: Latest mobile browser versions with newest features
