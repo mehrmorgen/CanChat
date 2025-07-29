@@ -23,6 +23,7 @@
   - Extract timestamp formatting, peer ID validation, and message creation functions
   - Export test framework setup and DOM helper functions
   - Write unit tests in `tests/utils.test.js` using Bun test runner and ESM imports
+  - After the task is complete, commit all changes to the repository
   - _Requirements: 2.1, 2.2, 3.3, 6.1, 6.3_
 
 - [ ] 5. Create main application module with ESM structure
@@ -30,6 +31,7 @@
   - Import utility functions from `./utils.js` using native ESM syntax
   - Maintain all existing WebRTC and PeerJS functionality
   - Remove any Node.js-specific code and ensure browser compatibility
+  - After the task is complete, commit all changes to the repository
   - _Requirements: 2.1, 2.2, 2.3, 4.1, 4.2_
 
 - [ ] 6. Update HTML file to use modular structure

@@ -1,0 +1,1159 @@
+/* Modern CSS Reset and Base Styles - Enhanced for Mobile-First */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    /* Enhanced CSS Custom Properties for modern browsers */
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --primary-active: #004085;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --secondary-color: #6c757d;
+    --light-bg: #f8f9fa;
+    --white: #ffffff;
+    --border-color: #dee2e6;
+    --text-color: #333;
+    --text-muted: #6c757d;
+
+    /* Enhanced spacing system using CSS Custom Properties */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-xxl: 3rem;
+
+    /* Enhanced border radius system */
+    --border-radius-sm: 4px;
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+
+    /* Enhanced shadow system */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.2);
+
+    /* Enhanced transition system */
+    --transition-fast: all 0.15s ease;
+    --transition: all 0.3s ease;
+    --transition-slow: all 0.5s ease;
+
+    /* Mobile-first typography scale */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+
+    /* Enhanced mobile-first breakpoints */
+    --breakpoint-sm: 480px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+}
+
+/* Enhanced mobile-first body with modern CSS features */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    min-height: 100dvh;
+    /* Modern dynamic viewport height for mobile */
+    color: var(--text-color);
+    line-height: 1.6;
+
+    /* Enhanced mobile performance */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+
+    /* Modern CSS Grid for body layout */
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    place-items: center;
+}
+
+/* Enhanced mobile-first responsive container using CSS Grid */
+.container {
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-lg);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    transition: var(--transition);
+
+    /* Modern CSS Grid layout */
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--spacing-lg);
+    min-height: calc(100vh - 2rem);
+    min-height: calc(100dvh - 2rem);
+    /* Modern dynamic viewport */
+
+    /* Enhanced mobile touch targets */
+    touch-action: manipulation;
+}
+
+/* Enhanced responsive breakpoints using modern CSS */
+@media (min-width: 480px) {
+    body {
+        padding: var(--spacing-lg);
+    }
+
+    .container {
+        padding: var(--spacing-xl);
+        border-radius: var(--border-radius-xl);
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+@media (min-width: 768px) {
+    body {
+        padding: var(--spacing-xl);
+    }
+
+    .container {
+        max-width: 600px;
+        padding: var(--spacing-xl);
+        min-height: auto;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        max-width: 800px;
+        padding: var(--spacing-xxl);
+    }
+}
+
+@media (min-width: 1280px) {
+    .container {
+        max-width: 900px;
+    }
+}
+
+/* Enhanced modern browser upgrade warning with mobile-first design */
+.browser-warning {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(8px);
+    /* Modern backdrop filter */
+    color: white;
+    z-index: 10000;
+    padding: var(--spacing-md);
+
+    /* Modern CSS Grid for centering */
+    display: grid;
+    place-items: center;
+    text-align: center;
+
+    /* Enhanced mobile scrolling */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.browser-warning-content {
+    width: 100%;
+    max-width: 600px;
+    background: var(--white);
+    color: var(--text-color);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xl);
+
+    /* Modern CSS Grid layout */
+    display: grid;
+    gap: var(--spacing-lg);
+
+    /* Enhanced mobile performance */
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.browser-warning h2 {
+    color: var(--danger-color);
+    margin: 0;
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.browser-warning p {
+    margin: 0;
+    line-height: 1.6;
+    font-size: var(--font-size-base);
+}
+
+.browser-warning ul {
+    text-align: left;
+    margin: 0;
+    padding-left: var(--spacing-lg);
+}
+
+.browser-warning li {
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+/* Enhanced browser download links using CSS Grid */
+.browser-links {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+@media (min-width: 480px) {
+    .browser-links {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .browser-links {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.browser-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius-lg);
+    transition: var(--transition);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    min-height: 44px;
+    /* Touch-friendly minimum */
+
+    /* Enhanced mobile touch feedback */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.browser-link:hover,
+.browser-link:focus {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.browser-link:active {
+    background: var(--primary-active);
+    transform: translateY(0);
+}
+
+/* Enhanced mobile-specific warning styles */
+.mobile-warning {
+    background: linear-gradient(135deg, var(--warning-color), #e0a800);
+    color: #333;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    margin-top: var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+/* Remove duplicate container styles - already defined above with modern features */
+
+/* Enhanced mobile-first heading with modern CSS features */
+h1 {
+    color: var(--text-color);
+    text-align: center;
+    margin: 0;
+    font-size: clamp(var(--font-size-xl), 4vw, var(--font-size-3xl));
+    font-weight: 700;
+    line-height: 1.2;
+
+    /* Enhanced gradient text with modern CSS */
+    background: linear-gradient(135deg, var(--primary-color), #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    /* Modern text rendering optimization */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Enhanced CSS Grid layout for sections with mobile-first approach */
+.sections-grid {
+    display: grid;
+    gap: var(--spacing-lg);
+    grid-template-columns: 1fr;
+
+    /* Modern CSS Grid auto-sizing */
+    grid-auto-rows: min-content;
+}
+
+/* Enhanced responsive grid layout */
+@media (min-width: 480px) {
+    .sections-grid {
+        gap: var(--spacing-xl);
+    }
+}
+
+@media (min-width: 768px) {
+    .sections-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-areas:
+            "peer-id connect"
+            "chat chat";
+    }
+
+    .section:nth-child(1) {
+        grid-area: peer-id;
+    }
+
+    .section:nth-child(2) {
+        grid-area: connect;
+    }
+
+    .section.chat-section {
+        grid-area: chat;
+    }
+}
+
+@media (min-width: 1024px) {
+    .sections-grid {
+        grid-template-columns: 1fr 1.2fr;
+        grid-template-areas:
+            "peer-id connect"
+            "chat chat";
+    }
+}
+
+/* Enhanced section styling with modern CSS Grid and Flexbox */
+.section {
+    background: var(--light-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+
+    /* Modern CSS Grid for internal layout */
+    display: grid;
+    gap: var(--spacing-md);
+    grid-template-rows: auto 1fr;
+
+    /* Enhanced mobile performance */
+    will-change: transform, box-shadow;
+    transform: translateZ(0);
+}
+
+.section:hover,
+.section:focus-within {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+}
+
+.section h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    line-height: 1.3;
+
+    /* Modern text rendering */
+    text-rendering: optimizeLegibility;
+}
+
+/* Enhanced responsive section padding */
+@media (min-width: 480px) {
+    .section {
+        padding: var(--spacing-xl);
+    }
+}
+
+@media (min-width: 768px) {
+    .section {
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (min-width: 1024px) {
+    .section {
+        padding: var(--spacing-xl);
+    }
+}
+
+/* Enhanced form controls using modern CSS Grid and Flexbox */
+.form-group {
+    display: grid;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+
+    /* Mobile-first: single column */
+    grid-template-columns: 1fr;
+}
+
+.form-group.inline {
+    /* Enhanced mobile-first inline forms */
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+@media (min-width: 480px) {
+    .form-group.inline {
+        flex-direction: row;
+        align-items: stretch;
+        gap: var(--spacing-md);
+    }
+
+    .form-group.inline input {
+        flex: 1;
+        min-width: 0;
+        /* Prevent flex item overflow */
+    }
+
+    .form-group.inline button {
+        flex-shrink: 0;
+        min-width: 100px;
+    }
+}
+
+/* Enhanced form controls with modern CSS features */
+input,
+button,
+textarea {
+    padding: var(--spacing-md);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    transition: var(--transition-fast);
+    background: var(--white);
+
+    /* Enhanced mobile touch targets */
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+
+    /* Modern CSS appearance */
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* Enhanced focus states with modern CSS */
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+
+    /* Modern focus ring for accessibility */
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Enhanced button styling with modern CSS features */
+button {
+    background: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    border: 2px solid var(--primary-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-height: 44px;
+
+    /* Modern button enhancements */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+
+    /* Enhanced mobile performance */
+    will-change: transform, background-color;
+    transform: translateZ(0);
+}
+
+button:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+button:active:not(:disabled) {
+    background: var(--primary-active);
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+button:focus-visible:not(:disabled) {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+button:disabled {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Enhanced mobile button interactions */
+@media (hover: none) and (pointer: coarse) {
+    button:hover:not(:disabled) {
+        transform: none;
+        box-shadow: none;
+    }
+
+    button:active:not(:disabled) {
+        background: var(--primary-active);
+        transform: scale(0.98);
+    }
+}
+
+/* Enhanced chat log with modern CSS features */
+#chat-log {
+    width: 100%;
+    min-height: 200px;
+    height: clamp(200px, 40vh, 400px);
+    max-height: 50vh;
+    resize: vertical;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    background: var(--white);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    line-height: 1.5;
+    font-size: var(--font-size-sm);
+
+    /* Enhanced mobile scrolling */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+
+    /* Modern CSS Grid for better text layout */
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Enhanced scrollbar styling for modern browsers */
+#chat-log::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chat-log::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chat-log::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+#chat-log::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* Enhanced peer ID display with modern CSS */
+#my-id {
+    font-weight: 600;
+    color: var(--success-color);
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-radius: var(--border-radius-lg);
+    border: 2px solid #b8dacc;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    word-break: break-all;
+    text-align: center;
+    font-size: var(--font-size-sm);
+
+    /* Modern CSS Grid for better layout */
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+
+    /* Enhanced mobile selection */
+    user-select: all;
+    -webkit-user-select: all;
+    -moz-user-select: all;
+
+    /* Modern text rendering */
+    text-rendering: optimizeLegibility;
+}
+
+/* Enhanced responsive adjustments */
+@media (min-width: 768px) {
+    #chat-log {
+        height: clamp(250px, 45vh, 500px);
+        font-size: var(--font-size-base);
+    }
+
+    #my-id {
+        font-size: var(--font-size-base);
+    }
+}
+
+.test-results {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.test-pass {
+    color: #28a745;
+}
+
+.test-fail {
+    color: #dc3545;
+}
+
+.connection-status {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-disconnected {
+    color: #6c757d;
+}
+
+.status-connecting {
+    color: #ffc107;
+    animation: pulse 1.5s infinite;
+}
+
+.status-connected {
+    color: #28a745;
+}
+
+.status-error {
+    color: #dc3545;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.retry-btn {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.retry-btn:hover {
+    background-color: #138496;
+}
+
+.connection-progress {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #007bff;
+    width: 0%;
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill.progress-starting {
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+}
+
+.progress-fill.progress-connecting {
+    background: linear-gradient(90deg, #17a2b8, #007bff);
+}
+
+.progress-fill.progress-finalizing {
+    background: linear-gradient(90deg, #28a745, #20c997);
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progress-shimmer 2s infinite;
+}
+
+@keyframes progress-shimmer {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.network-diagnostics {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+}
+
+.network-diagnostics h4 {
+    margin: 0 0 8px 0;
+    color: #856404;
+    font-size: 14px;
+}
+
+.diagnostic-item {
+    margin: 4px 0;
+    font-size: 12px;
+    color: #856404;
+}
+
+.diagnostic-success {
+    color: #155724;
+}
+
+.diagnostic-warning {
+    color: #856404;
+}
+
+.diagnostic-error {
+    color: #721c24;
+}
+
+.performance-metrics {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #e8f4fd;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+}
+
+.performance-metrics h4 {
+    margin: 0 0 8px 0;
+    color: #0c5460;
+    font-size: 14px;
+}
+
+.metric-item {
+    margin: 4px 0;
+    font-size: 12px;
+    color: #0c5460;
+    display: flex;
+    justify-content: space-between;
+}
+
+.metric-value {
+    font-weight: bold;
+}
+
+.metric-good {
+    color: #155724;
+}
+
+.metric-warning {
+    color: #856404;
+}
+
+.metric-poor {
+    color: #721c24;
+}
+
+.connection-quality {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.quality-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.quality-excellent {
+    background-color: #28a745;
+}
+
+.quality-good {
+    background-color: #ffc107;
+}
+
+.quality-poor {
+    background-color: #dc3545;
+}
+
+/* TURN Relay Connection Indicators */
+.relay-notification {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    color: white;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    margin: var(--spacing-sm) 0;
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.relay-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #17a2b8;
+    border-radius: 50%;
+    margin-right: var(--spacing-xs);
+    animation: relay-pulse 2s infinite;
+}
+
+@keyframes relay-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.connection-type-relay {
+    color: #17a2b8;
+    font-weight: 600;
+}
+
+.relay-latency-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    margin-top: var(--spacing-xs);
+}
+
+/* Enhanced Troubleshooting Steps Styles */
+.troubleshooting-steps {
+    margin-top: 10px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    border-left: 4px solid #17a2b8;
+}
+
+.troubleshooting-steps h4 {
+    margin: 0 0 10px 0;
+    color: #0c5460;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.troubleshooting-steps h4::before {
+    content: '🔧';
+    font-size: 16px;
+}
+
+.troubleshooting-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.troubleshooting-step:last-child {
+    margin-bottom: 0;
+}
+
+.step-icon {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-title {
+    font-weight: 600;
+    color: #495057;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.step-description {
+    font-size: 12px;
+    color: #6c757d;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.step-action {
+    font-size: 11px;
+    color: #007bff;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.step-action:hover {
+    color: #0056b3;
+}
+
+/* Enhanced Error Classification Styles */
+.error-classification {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    border-left: 4px solid #ffc107;
+}
+
+.error-classification h4 {
+    margin: 0 0 8px 0;
+    color: #856404;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.error-classification h4::before {
+    content: '⚠️';
+    font-size: 16px;
+}
+
+.classification-item {
+    margin: 4px 0;
+    font-size: 12px;
+    color: #856404;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.classification-confidence {
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+}
+
+.confidence-high {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.confidence-medium {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.confidence-low {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Fallback Suggestions Styles */
+.fallback-suggestions {
+    margin-top: 10px;
+    padding: 12px;
+    background-color: #e8f4fd;
+    border: 1px solid #bee5eb;
+    border-radius: 6px;
+    border-left: 4px solid #17a2b8;
+}
+
+.fallback-suggestions h4 {
+    margin: 0 0 10px 0;
+    color: #0c5460;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fallback-suggestions h4::before {
+    content: '🔄';
+    font-size: 16px;
+}
+
+.fallback-item {
+    margin: 6px 0;
+    padding: 6px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    font-size: 12px;
+    color: #0c5460;
+}
+
+/* TURN Server Information Styles */
+.turn-server-info {
+    margin-top: 10px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    border-left: 4px solid #6c757d;
+}
+
+.turn-server-info h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.turn-
+server-info h4::before {
+    content: '🌐';
+    font-size: 16px;
+}
+
+.turn-server-item {
+    margin: 6px 0;
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    font-size: 12px;
+    color: #495057;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.server-status {
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+}
+
+.server-available {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.server-unavailable {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.server-testing {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.network-type {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.network-direct {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.network-mobile {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.network-secure {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.network-firewall {
+    background-color: #f8d7da;
+    color: #721c24;
+}
