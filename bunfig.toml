@@ -1,0 +1,13 @@
+[install]
+# Bun package management configuration
+registry = "https://registry.npmjs.org/"
+cache = true
+
+[run]
+# Development server configuration
+bun = "latest"
+
+[test]
+# Test runner configuration
+preload = []
+timeout = 30000

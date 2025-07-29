@@ -1,0 +1,15 @@
+{
+  "name": "webrtc-peerjs-chat",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A minimal peer-to-peer text chat application using WebRTC and PeerJS",
+  "scripts": {
+    "dev": "bun --bun run --port=3000 --serve=./",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "start": "bun --bun run --port=3000 --serve=./"
+  },
+  "keywords": ["webrtc", "peerjs", "chat", "p2p"],
+  "author": "",
+  "license": "MIT"
+}

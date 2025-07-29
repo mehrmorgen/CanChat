@@ -6,13 +6,13 @@
   - Update `.kiro/steering/product.md` to reflect ESM development approach
   - _Requirements: 1.1, 2.1, 5.1_
 
-- [ ] 2. Create Bun configuration files
+- [x] 2. Create Bun configuration files
   - Create `bunfig.toml` with development, test, and start script configurations
   - Create `package.json` with ESM type declaration and script definitions
   - Configure Bun registry settings and test runner options
   - _Requirements: 1.1, 1.2, 3.1_
 
-- [ ] 3. Extract and modularize CSS styles
+- [x] 3. Extract and modularize CSS styles
   - Create `src/styles.css` by extracting all inline CSS from `chat.html`
   - Maintain all existing responsive design and CSS custom properties
   - Preserve all animations, transitions, and mobile-first approach
