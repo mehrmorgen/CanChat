@@ -18,7 +18,7 @@
   - Preserve all animations, transitions, and mobile-first approach
   - _Requirements: 2.1, 5.2, 5.3_
 
-- [ ] 4. Create utility functions module with ESM exports
+- [x] 4. Create utility functions module with ESM exports
   - Create `src/utils.js` with ESM export syntax for utility functions
   - Extract timestamp formatting, peer ID validation, and message creation functions
   - Export test framework setup and DOM helper functions
