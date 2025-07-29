@@ -8,7 +8,8 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
 
 - **Direct P2P Communication**: Messages flow directly between browsers after connection establishment
 - **No Server Dependencies**: Uses PeerJS cloud signaling and Google STUN servers for connection setup
-- **Single File Application**: Entirely self-contained HTML file with no build process required
+- **Modular ESM Architecture**: Clean separation of concerns with native ES modules
+- **Fast Development Environment**: Bun-powered development server with sub-100ms startup
 - **Real-time Messaging**: Instant message delivery between connected peers
 - **Simple Interface**: Clean, minimal UI focused on core chat functionality
 
@@ -21,4 +22,4 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
 
 ## Technical Approach
 
-The application follows Test-Driven Development (TDD) methodology with comprehensive unit and integration testing. Built exclusively for modern browsers, it leverages native WebRTC APIs and ES2020+ JavaScript features without polyfills or transpilation. All functionality is contained within a single HTML file for maximum portability and ease of deployment.
+The application follows Test-Driven Development (TDD) methodology with comprehensive unit and integration testing using Bun's native test runner. Built exclusively for modern browsers, it leverages native WebRTC APIs, ES2020+ JavaScript features, and ESM modules without polyfills or transpilation. The modular architecture separates concerns while maintaining simplicity and fast development cycles through Bun's optimized runtime.

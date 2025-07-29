@@ -2,16 +2,17 @@
 
 ## Core Technologies
 
-- **HTML5**: Single-file application with modern semantic markup
-- **CSS3**: Modern CSS features (Grid, Flexbox, Custom Properties) inline
-- **JavaScript (Latest)**: Cutting-edge vanilla JavaScript using the most recent features available in current Firefox, Safari, and Chrome
+- **HTML5**: Modern semantic markup with modular CSS and JavaScript
+- **CSS3**: Modern CSS features (Grid, Flexbox, Custom Properties) in separate stylesheet
+- **JavaScript (Latest)**: Cutting-edge vanilla JavaScript using ESM modules and the most recent features available in current Firefox, Safari, and Chrome
 - **WebRTC**: Direct peer-to-peer communication via browser APIs
 - **PeerJS**: WebRTC abstraction library for simplified connection management
+- **Bun v1.x**: Fast JavaScript runtime for development server and testing
 
 ## External Dependencies
 
 - **PeerJS Library**: `https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js`
-- **Jest Testing Framework**: `https://unpkg.com/jest-lite@1.0.0-alpha.4/dist/core.js`
+- **Bun Test Runner**: Native test framework with ESM support
 - **PeerJS Cloud Server**: Default signaling server for peer discovery
 - **Google STUN Server**: `stun:stun.l.google.com:19302` for NAT traversal
 
@@ -19,19 +20,29 @@
 
 - **Test-Driven Development (TDD)**: All features developed with tests first
 - **100% Test Coverage**: Every function and code path must be tested
-- **Single File Architecture**: No build process, bundling, or transpilation
-- **Modern Browser Testing**: Tests run natively in modern browser environments
+- **ESM Module Architecture**: Native ES modules with import/export syntax
+- **Modern Browser Testing**: Tests run with Bun's native test runner
 - **Modern-First Development**: Use the latest JavaScript features and browser APIs without any backwards compatibility considerations
 
 ## Common Commands
 
-### Development
+### Development with Bun
 
 ```bash
-# No build process required - open directly in browser
-open chat.html
-# or serve locally
-python -m http.server 8000
+# Start development server (fast startup <100ms)
+bun run dev
+
+# Install dependencies
+bun install
+
+# Run tests in watch mode
+bun test --watch
+
+# Run tests once
+bun test
+
+# Start production server
+bun run start
 ```
 
 ### Git Operations
@@ -49,16 +60,17 @@ git commit -m "message"              # Commit with message
 
 ### Testing
 
-- Tests run automatically when the HTML file loads
-- All test results displayed in the browser interface
-- No separate test runner required
+- Tests run with Bun's native test runner
+- ESM import/export syntax for test modules
+- Watch mode for continuous testing during development
+- Fast test execution with native runtime
 
 ### Deployment
 
-- Copy `chat.html` to any web server or CDN
-- No compilation or build step needed
-- Works with file:// protocol for local testing
-- Works on Github Pages
+- Static file serving with no build step required
+- ESM modules served directly to browsers
+- Works with CDN deployment
+- GitHub Pages compatible
 
 ## Browser Requirements
 
