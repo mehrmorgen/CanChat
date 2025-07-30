@@ -19,84 +19,53 @@ import {
 // Import Bun's test functions
 import { describe, test, expect } from 'bun:test';
 
-// Bun's expect is imported above
+// Import jsdom for proper DOM testing
+import { JSDOM } from 'jsdom';
 
-// Mock DOM environment for testing
-const mockDOM = () => {
-    global.document = {
-        getElementById: (id) => {
-            const mockElements = {
-                'my-id': {
-                    _textContent: 'Connecting...',
-                    set textContent(value) { this._textContent = value; },
-                    get textContent() { return this._textContent; }
-                },
-                'chat-log': {
-                    _value: '',
-                    _scrollTop: 0,
-                    scrollHeight: 100,
-                    set value(val) { this._value = val; },
-                    get value() { return this._value; },
-                    set scrollTop(value) { this._scrollTop = value; },
-                    get scrollTop() { return this._scrollTop; }
-                },
-                'test-output': {
-                    innerHTML: '',
-                    set innerHTML(value) { this._innerHTML = value; },
-                    get innerHTML() { return this._innerHTML || ''; }
-                },
-                'status-indicator': {
-                    className: 'status-indicator',
-                    classList: {
-                        add: (cls) => { this.className += ' ' + cls; },
-                        remove: (cls) => { this.className = this.className.replace(cls, '').trim(); }
-                    }
-                },
-                'status-text': {
-                    _textContent: 'Disconnected',
-                    set textContent(value) { this._textContent = value; },
-                    get textContent() { return this._textContent; }
-                },
-                'send-btn': {
-                    _disabled: true,
-                    set disabled(value) { this._disabled = value; },
-                    get disabled() { return this._disabled; }
-                },
-                'connect-btn': {
-                    disabled: false,
-                    addEventListener: function(event, handler, options) {
-                        this._event = event;
-                        this._handler = handler;
-                        this._options = options;
-                    }
-                },
-                'message-input': {
-                    value: '',
-                    addEventListener: function(event, handler, options) {
-                        this._event = event;
-                        this._handler = handler;
-                        this._options = options;
-                    }
-                }
-            };
-            return mockElements[id] || null;
-        }
-    };
-    
-    global.window = {
-        myId: null,
-        location: {
-            protocol: 'https:',
-            hostname: 'localhost'
-        }
-    };
-    
-    global.console = {
-        log: () => {},
-        error: () => {},
-        warn: () => {}
-    };
+// Setup jsdom environment for testing
+const setupJSDOM = () => {
+    const dom = new JSDOM(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Test</title>
+        </head>
+        <body>
+            <div id="my-id">Connecting...</div>
+            <input id="peer-id-input" type="text" />
+            <button id="connect-btn">Connect</button>
+            <button id="retry-btn" style="display: none;">Retry</button>
+            <button id="send-btn" disabled>Send</button>
+            <input id="message-input" type="text" />
+            <textarea id="chat-log"></textarea>
+            <div id="status-indicator" class="status-indicator"></div>
+            <div id="status-text">Disconnected</div>
+            <div id="test-output"></div>
+        </body>
+        </html>
+    `, {
+        url: 'https://localhost:3000',
+        pretendToBeVisual: true,
+        resources: 'usable'
+    });
+
+    // Set up global environment
+    global.window = dom.window;
+    global.document = dom.window.document;
+    global.navigator = dom.window.navigator;
+
+    // Mock additional properties needed for tests
+    global.window.myId = null;
+    global.window.isSecureContext = true;
+    global.window.RTCPeerConnection = function () { };
+    global.window.RTCDataChannel = function () { };
+    global.window.Peer = null;
+
+    return dom;
 };
+
+// Legacy function name for compatibility
+const mockDOM = setupJSDOM;
 
 // Mock DOM with error-throwing getElementById
 const mockDOMWithErrors = () => {

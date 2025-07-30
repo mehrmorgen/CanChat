@@ -62,7 +62,7 @@
   - Run `bun test --watch` and verify all tests pass
   - _Requirements: 3.1, 3.2, 6.1, 6.2, 6.4_
 
-- [ ] 10. Perform comprehensive smoke testing
+- [x] 10. Perform comprehensive smoke testing
   - Open two browser contexts to test peer-to-peer functionality
   - Exchange peer IDs between browser instances
   - Send and receive messages to confirm DataChannel chat works
@@ -70,7 +70,7 @@
   - Test responsive design and mobile compatibility
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 11. Validate test coverage and quality
+- [-] 11. Validate test coverage and quality
   - Run complete test suite with `bun test` to ensure 100% coverage
   - Verify all module boundaries and exports are properly tested
   - Confirm integration tests cover end-to-end WebRTC workflows

@@ -4,8 +4,10 @@
  * Uses modern JavaScript features and native ESM imports
  */
 
-// External dependencies
-import Peer from 'https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js';
+// External dependencies - PeerJS is loaded globally via script tag
+// Access via window.Peer since the CDN version doesn't support ESM
+// Use optional chaining for testing environments
+const Peer = (typeof window !== 'undefined') ? window.Peer : null;
 
 // Internal modules
 import { 
@@ -323,14 +325,19 @@ const updateConnectionStatus = (status, message) => {
     const statusText = getElementById('status-text');
     const retryBtn = getElementById('retry-btn');
     
-    if (!statusIndicator || !statusText) return;
+    // Update status text if available
+    if (statusText) {
+        statusText.textContent = message;
+    }
     
-    // Remove all status classes
-    statusIndicator.className = 'status-indicator';
-    
-    // Add appropriate status class
-    statusIndicator.classList.add(`status-${status}`);
-    statusText.textContent = message;
+    // Update status indicator if available
+    if (statusIndicator) {
+        // Remove all status classes
+        statusIndicator.className = 'status-indicator';
+        
+        // Add appropriate status class
+        statusIndicator.classList.add(`status-${status}`);
+    }
     
     // Show/hide retry button based on status
     if (retryBtn) {
@@ -730,7 +737,7 @@ const setupEventListeners = () => {
  * Main application initialization function
  * Initializes PeerJS and sets up event listeners
  */
-export const initializeApp = () => {
+const initializeApp = () => {
     // Initialize connection status
     updateConnectionStatus('disconnected', 'Initializing...');
 
@@ -772,22 +779,25 @@ const initializeTestFramework = () => {
 
 // ===== MODULE INITIALIZATION =====
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Validate browser compatibility first
-    if (!detectAndBlockLegacyBrowsers()) {
-        return; // Stop execution if browser is not supported
-    }
+// Initialize when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Validate browser compatibility first
+        if (!detectAndBlockLegacyBrowsers()) {
+            return; // Stop execution if browser is not supported
+        }
 
-    // Initialize the application
-    initializeApp();
-    
-    // Initialize test framework
-    initializeTestFramework();
-});
+        // Initialize the application
+        initializeApp();
+        
+        // Initialize test framework
+        initializeTestFramework();
+    });
+}
 
 // Export main functions for testing and external use
 export {
+    initializeApp,
     connectToPeer,
     sendMessage,
     handleReceivedMessage,

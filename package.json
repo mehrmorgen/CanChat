@@ -11,5 +11,9 @@
   },
   "keywords": ["webrtc", "peerjs", "chat", "p2p"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "playwright": "^1.54.1"
+  }
 }

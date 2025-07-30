@@ -7,12 +7,15 @@
     <title>WebRTC PeerJS Chat</title>
 
     <!-- Resource optimization: preload critical resources -->
-    <link rel="preload" href="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" as="script">
+    <link rel="preload" href="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" as="script" crossorigin="anonymous">
     <link rel="dns-prefetch" href="//unpkg.com">
     <link rel="dns-prefetch" href="//0.peerjs.com">
     <link rel="dns-prefetch" href="//stun.l.google.com">
     
     <link rel="stylesheet" href="/src/styles.css">
+    
+    <!-- Load PeerJS before our module -->
+    <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
