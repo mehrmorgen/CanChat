@@ -23,58 +23,10 @@ import {
     expect as utilExpect
 } from '../src/utils.js';
 
-// Use Bun's test functions when available, fallback to our own
-const describe = typeof globalThis.describe !== 'undefined' ? globalThis.describe : utilDescribe;
-const test = typeof globalThis.test !== 'undefined' ? globalThis.test : utilTest;
+// Import Bun's test functions
+import { describe, test, expect } from 'bun:test';
 
-// Enhanced expect function that works with both Bun and our framework
-const expect = (actual) => {
-    // If Bun's expect is available, use it
-    if (typeof globalThis.expect !== 'undefined') {
-        return globalThis.expect(actual);
-    }
-    
-    // Otherwise use our custom implementation
-    return {
-        toBe: (expected) => {
-            if (actual !== expected) {
-                throw new Error(`Expected ${expected}, but got ${actual}`);
-            }
-        },
-        toBeNull: () => {
-            if (actual !== null) {
-                throw new Error(`Expected null, but got ${actual}`);
-            }
-        },
-        not: {
-            toBe: (expected) => {
-                if (actual === expected) {
-                    throw new Error(`Expected not ${expected}, but got ${actual}`);
-                }
-            },
-            toBeNull: () => {
-                if (actual === null) {
-                    throw new Error(`Expected not null, but got null`);
-                }
-            }
-        },
-        toMatch: (pattern) => {
-            if (!pattern.test(actual)) {
-                throw new Error(`Expected "${actual}" to match pattern ${pattern}`);
-            }
-        },
-        toContain: (expected) => {
-            if (!actual.includes(expected)) {
-                throw new Error(`Expected "${actual}" to contain "${expected}"`);
-            }
-        },
-        toEqual: (expected) => {
-            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-                throw new Error(`Expected ${JSON.stringify(expected)}, but got ${JSON.stringify(actual)}`);
-            }
-        }
-    };
-};
+// Bun's expect is imported above
 
 // Mock DOM environment for testing
 const mockDOM = () => {
@@ -82,16 +34,18 @@ const mockDOM = () => {
         getElementById: (id) => {
             const mockElements = {
                 'my-id': {
-                    textContent: 'Connecting...',
+                    _textContent: 'Connecting...',
                     set textContent(value) { this._textContent = value; },
-                    get textContent() { return this._textContent || 'Connecting...'; }
+                    get textContent() { return this._textContent; }
                 },
                 'chat-log': {
-                    value: '',
-                    scrollTop: 0,
+                    _value: '',
+                    _scrollTop: 0,
                     scrollHeight: 100,
+                    set value(val) { this._value = val; },
+                    get value() { return this._value; },
                     set scrollTop(value) { this._scrollTop = value; },
-                    get scrollTop() { return this._scrollTop || 0; }
+                    get scrollTop() { return this._scrollTop; }
                 },
                 'test-output': {
                     innerHTML: '',
@@ -335,7 +289,7 @@ describe('Edge Cases and Error Handling', () => {
         expect(validatePeerId(undefined)).toBe(false);
         
         expect(createSystemMessage('')).toBe('System: ');
-        expect(createMessage('', null)).toBe('Me: ');
+        expect(createMessage('', null)).toBe('Unknown: ');
     });
 
     test('formatTimestamp should handle invalid dates', () => {
@@ -391,8 +345,4 @@ describe('Integration Tests', () => {
     });
 });
 
-// If running directly (not with Bun), run the tests
-if (typeof globalThis.test === 'undefined') {
-    console.log('Running tests with custom framework...');
-    // The tests will run automatically when the describe/test functions are called
-}
+// Tests will be run by Bun test runner

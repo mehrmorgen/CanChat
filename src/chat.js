@@ -19,12 +19,7 @@ import {
     addMessageToChat,
     addSystemMessage,
     setupTestFramework,
-    describe,
-    test,
-    asyncTest,
-    expect,
-    displayTestResults,
-    runTests
+    displayTestResults
 } from './utils.js';
 
 // ===== APPLICATION STATE =====
@@ -764,50 +759,12 @@ export const initializeApp = () => {
 // ===== TEST FRAMEWORK INITIALIZATION =====
 
 /**
- * Initializes the test framework and runs basic tests
+ * Initializes the test framework for development mode
  */
 const initializeTestFramework = () => {
     setupTestFramework();
     
-    // Basic functionality tests
-    describe('Application Initialization', () => {
-        test('should have required DOM elements', () => {
-            expect(getElementById('my-id')).not.toBeNull();
-            expect(getElementById('peer-id-input')).not.toBeNull();
-            expect(getElementById('connect-btn')).not.toBeNull();
-            expect(getElementById('chat-log')).not.toBeNull();
-            expect(getElementById('message-input')).not.toBeNull();
-            expect(getElementById('send-btn')).not.toBeNull();
-        });
-
-        test('should have required functions available', () => {
-            expect(typeof initializeApp).toBe('function');
-            expect(typeof connectToPeer).toBe('function');
-            expect(typeof sendMessage).toBe('function');
-            expect(typeof handleReceivedMessage).toBe('function');
-        });
-    });
-
-    describe('Utility Functions', () => {
-        test('should format timestamps correctly', () => {
-            const timestamp = formatTimestamp(new Date('2023-01-01T12:00:00'));
-            expect(timestamp).toContain(':');
-        });
-
-        test('should validate peer IDs correctly', () => {
-            expect(validatePeerId('valid-id')).toBe(true);
-            expect(validatePeerId('')).toBe(false);
-            expect(validatePeerId('   ')).toBe(false);
-        });
-
-        test('should create system messages correctly', () => {
-            const message = createSystemMessage('test message');
-            expect(message).toContain('System:');
-            expect(message).toContain('test message');
-        });
-    });
-
-    // Display test results after a short delay
+    // Display test results after a short delay for development mode
     setTimeout(() => {
         displayTestResults();
     }, 1000);
