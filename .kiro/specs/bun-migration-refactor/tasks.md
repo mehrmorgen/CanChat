@@ -26,7 +26,7 @@
   - After the task is complete, commit all changes to the repository
   - _Requirements: 2.1, 2.2, 3.3, 6.1, 6.3_
 
-- [ ] 5. Create main application module with ESM structure
+- [x] 5. Create main application module with ESM structure
   - Create `src/chat.js` as main application entrypoint using ESM imports
   - Import utility functions from `./utils.js` using native ESM syntax
   - Maintain all existing WebRTC and PeerJS functionality
