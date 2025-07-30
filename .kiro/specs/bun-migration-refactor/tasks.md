@@ -34,7 +34,7 @@
   - After the task is complete, commit all changes to the repository
   - _Requirements: 2.1, 2.2, 2.3, 4.1, 4.2_
 
-- [ ] 6. Update HTML file to use modular structure
+- [x] 6. Update HTML file to use modular structure
   - Remove all inline `<script>` tags from `chat.html`
   - Add `<script type="module" src="/src/chat.js">` module reference
   - Add `<link rel="stylesheet" href="/src/styles.css">` for extracted styles
