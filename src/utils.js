@@ -103,12 +103,20 @@ export function addEventListenerSafe(element, event, handler, options = {}) {
 export function updateMyId(id) {
     const myIdElement = getElementById('my-id');
     if (myIdElement) {
-        myIdElement.textContent = id;
+        try {
+            myIdElement.textContent = id;
+        } catch (error) {
+            console.error('Error updating peer ID display:', error);
+        }
     }
     
     // Store globally for compatibility
     if (typeof window !== 'undefined') {
-        window.myId = id;
+        try {
+            window.myId = id;
+        } catch (error) {
+            console.error('Error storing peer ID globally:', error);
+        }
     }
 }
 
@@ -124,9 +132,13 @@ export function addMessageToChat(message, sender) {
         return;
     }
 
-    const formattedMessage = createMessage(message, sender);
-    chatLog.value += formattedMessage + '\n';
-    chatLog.scrollTop = chatLog.scrollHeight;
+    try {
+        const formattedMessage = createMessage(message, sender);
+        chatLog.value += formattedMessage + '\n';
+        chatLog.scrollTop = chatLog.scrollHeight;
+    } catch (error) {
+        console.error('Error adding message to chat:', error);
+    }
 }
 
 /**
