@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Task Completion Auto-Commit",
+  "description": "Automatically performs an amend commit when tasks.md is updated with task completion marks, ensuring the task completion is bundled with the related implementation changes",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "tasks.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task has been marked as completed in tasks.md. Please perform a git amend commit to bundle this task completion update with the related implementation changes that were just made. Use the command: git commit --amend --no-edit"
+  }
+}
