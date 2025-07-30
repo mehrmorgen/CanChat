@@ -58,6 +58,58 @@ git commit -m "message"              # Commit with message
 
 **Important**: Avoid interactive git commands like `git rebase -i`, `git add -p`, or any command that opens an editor or requires user interaction during execution.
 
+#### Commit Requirements
+
+**MANDATORY**: After completing each task from a spec, you MUST commit the changes with a structured commit message that includes:
+
+1. **Task Description**: Brief summary of what was implemented
+2. **Requirements Fulfilled**: Complete copy of the requirement(s) addressed, including:
+   - User story in full
+   - All acceptance criteria that were satisfied
+   - Requirement numbers/identifiers
+
+**Commit Message Format:**
+```
+<Task Summary>
+
+Requirements Fulfilled:
+
+Requirement X.Y: <Full User Story>
+As a [role], I want [feature], so that [benefit]
+
+Acceptance Criteria:
+1. WHEN [event] THEN [system] SHALL [response]
+2. IF [precondition] THEN [system] SHALL [response]
+[... all relevant acceptance criteria ...]
+
+Files Modified:
+- path/to/file1.js
+- path/to/file2.html
+- tests/feature.test.js
+```
+
+**Example:**
+```bash
+git add src/chat.js tests/chat.test.js
+git commit -m "Implement peer connection establishment
+
+Requirements Fulfilled:
+
+Requirement 1.1: Peer Connection Management
+As a user, I want to establish a connection with another peer using their ID, so that I can start a chat session.
+
+Acceptance Criteria:
+1. WHEN a user enters a valid peer ID THEN the system SHALL attempt to establish a WebRTC connection
+2. WHEN the connection is successful THEN the system SHALL display a connection status message
+3. IF the peer ID is invalid or unreachable THEN the system SHALL display an appropriate error message
+
+Files Modified:
+- src/chat.js
+- tests/chat.test.js"
+```
+
+This approach establishes the git history as a comprehensive source of truth, linking each code change directly to the business requirements it fulfills.
+
 ### Testing
 
 - Tests run with Bun's native test runner
