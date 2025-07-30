@@ -5,9 +5,7 @@ cache = true
 
 [run]
 # Development server configuration
-bun = "latest"
 
 [test]
 # Test runner configuration
-preload = []
 timeout = 30000
