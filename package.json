@@ -7,12 +7,17 @@
     "dev": "bun run server.js",
     "test": "bun test",
     "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:mutation": "stryker run",
+    "test:all": "bun run test:coverage && bun run test:mutation",
     "start": "bun run server.js"
   },
   "keywords": ["webrtc", "peerjs", "chat", "p2p"],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@stryker-mutator/core": "^9.0.1",
+    "@stryker-mutator/javascript-mutator": "^4.0.0",
     "jsdom": "^26.1.0",
     "playwright": "^1.54.1"
   }
