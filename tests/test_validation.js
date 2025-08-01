@@ -127,7 +127,7 @@ console.log('📦 ESM modules properly configured');
 console.log('⚡ Performance requirements met');
 console.log('');
 console.log('📝 NEXT STEPS:');
-console.log('1. Follow manual_test_guide.md for peer-to-peer testing');
+console.log('1. Follow test procedures for peer-to-peer testing');
 console.log('2. Test with two browser instances');
 console.log('3. Verify message exchange functionality');
 console.log('4. Test responsive design on mobile devices');

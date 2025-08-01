@@ -70,12 +70,7 @@ This application uses cutting-edge JavaScript features (ES2020+) and requires pr
 
 #### Detailed IDE Configuration
 
-For comprehensive IDE setup instructions, see [IDE_CONFIGURATION.md](IDE_CONFIGURATION.md) which covers:
-
-- **VS Code**: Settings, extensions, and debugging configuration
-- **WebStorm/IntelliJ**: JavaScript language version and code style setup
-- **Sublime Text**: Package installation and syntax configuration
-- **Common Issues**: Solutions for syntax errors and compatibility problems
+For comprehensive IDE setup instructions, configure your IDE for ES2020+ JavaScript support with proper settings for modern JavaScript features.
 
 #### Environment Detection
 
@@ -145,7 +140,7 @@ This application leverages cutting-edge JavaScript features:
 **Modern Features Not Recognized**:
 - Check browser version (must be modern)
 - Verify IDE configuration for ES2020+
-- See [IDE_CONFIGURATION.md](IDE_CONFIGURATION.md) for detailed setup
+- Configure your IDE for modern JavaScript features
 
 For more detailed troubleshooting, the application's environment detection system will automatically identify issues and provide specific guidance.
 
