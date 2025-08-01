@@ -129,8 +129,8 @@ Create `.vscode/tasks.json` for development tasks:
     {
       "label": "Start Development Server",
       "type": "shell",
-      "command": "python",
-      "args": ["-m", "http.server", "8000"],
+      "command": "bun",
+      "args": ["run", "dev"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -144,7 +144,7 @@ Create `.vscode/tasks.json` for development tasks:
       "label": "Open in Browser",
       "type": "shell",
       "command": "open",
-      "args": ["http://localhost:8000/chat.html"],
+      "args": ["https://localhost:8443/chat.html"],
       "group": "test",
       "dependsOn": "Start Development Server",
       "presentation": {

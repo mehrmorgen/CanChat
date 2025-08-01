@@ -1,9 +1,39 @@
 /**
- * Simple Bun development server for WebRTC Chat
+ * HTTPS Bun development server for WebRTC Chat
+ * 
+ * This server provides HTTPS functionality required for WebRTC to work properly.
+ * It uses existing certificate files (localhost.crt and localhost.key) for HTTPS.
  */
 
+import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+// Check if certificate files exist
+const certFile = 'localhost.crt';
+const keyFile = 'localhost.key';
+
+if (!existsSync(certFile) || !existsSync(keyFile)) {
+  console.error('❌ Certificate files not found. Please generate them first.');
+  console.error('💡 You can use OpenSSL to generate self-signed certificates:');
+  console.error('openssl req -x509 -newkey rsa:2048 -keyout localhost.key -out localhost.crt -days 30 -nodes -subj "/CN=localhost"');
+  process.exit(1);
+}
+
+// Read certificate files
+const cert = readFileSync(certFile);
+const key = readFileSync(keyFile);
+
+// Default port for HTTPS
+const port = 8443;
+
+// Create HTTPS server
 const server = Bun.serve({
-  port: 3000,
+  port: port,
+  tls: {
+    cert: cert,
+    key: key,
+  },
   async fetch(req) {
     const url = new URL(req.url);
     let filePath = url.pathname;
@@ -39,4 +69,10 @@ const server = Bun.serve({
   },
 });
 
-console.log(`🚀 Development server running at http://localhost:${server.port}/`);
+console.log('🔒 HTTPS Test Server for WebRTC PeerJS Chat');
+console.log('=' + '='.repeat(49));
+console.log(`🚀 HTTPS Server started on port ${port}`);
+console.log(`🌐 Access the chat application at: https://localhost:${port}/chat.html`);
+console.log('⚠️  You\'ll need to accept the self-signed certificate warning in your browser.');
+console.log('💡 This is normal for local testing - production uses proper certificates.');
+console.log('🛑 Press Ctrl+C to stop the server');

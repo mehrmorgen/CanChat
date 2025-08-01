@@ -286,7 +286,7 @@ For manual testing, follow the instructions in `manual_test_guide.md`, which cov
 
 2. **WebRTC Not Working Locally**
    - Use HTTPS (required for WebRTC)
-   - Run `python test_https_server.py` for local HTTPS
+   - Run `bun run dev` for local HTTPS
    - Avoid `file://` protocol for testing
 
 3. **Modern Features Not Recognized**

@@ -93,10 +93,12 @@ The application automatically detects your development environment and provides:
 git clone https://github.com/mehrmorgen/CanChat.git
 cd CanChat
 
-# Serve locally (HTTPS required for WebRTC)
-python test_https_server.py
+# Install dependencies
+bun install
 
-# Or use any local HTTPS server
+# Serve locally (HTTPS required for WebRTC)
+bun run dev
+
 # The application is a single HTML file with no build process
 ```
 
@@ -137,7 +139,7 @@ This application leverages cutting-edge JavaScript features:
 
 **WebRTC Not Working Locally**:
 - Use HTTPS (required for WebRTC)
-- Run `python test_https_server.py` for local HTTPS
+- Run `bun run dev` for local HTTPS
 - Avoid `file://` protocol for testing
 
 **Modern Features Not Recognized**:
@@ -187,11 +189,18 @@ To share the application for testing:
 ### Repository Structure
 ```
 .
-├── chat.html                    # Main application (single-file architecture)
+├── chat.html                    # Main application HTML entry point
 ├── README.md                    # This documentation
-├── test_https_server.py         # Local HTTPS development server
-├── server.crt                   # SSL certificate for local testing
-├── server.key                   # SSL private key for local testing
+├── server.js                    # HTTPS Bun development server
+├── src/                         # Source code modules
+│   ├── chat.js                  # Main application module (ESM)
+│   ├── utils.js                 # Helper functions and utilities (ESM)
+│   └── styles.css               # Extracted CSS styles
+├── localhost.crt                # SSL certificate for local testing
+├── localhost.key                # SSL private key for local testing
+├── bunfig.toml                  # Bun configuration
+├── package.json                 # Package management and script definitions
+├── tests/                       # Test modules
 └── .kiro/                       # Kiro IDE configuration and specs
 ```
 
