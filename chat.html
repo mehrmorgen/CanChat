@@ -12,7 +12,7 @@
     <link rel="dns-prefetch" href="//0.peerjs.com">
     <link rel="dns-prefetch" href="//stun.l.google.com">
     
-    <link rel="stylesheet" href="src/styles.css">
+    <link rel="stylesheet" href="/src/styles.css">
     
     <!-- Load PeerJS before our module -->
     <script src="https://unpkg.com/peerjs@1.5.0/dist/peerjs.min.js" crossorigin="anonymous"></script>
@@ -69,6 +69,42 @@
                     <button id="send-btn" disabled>Send</button>
                 </div>
             </div>
+            <div class="section">
+                <h3>File Transfer</h3>
+                <div class="form-group inline">
+                    <input type="file" id="file-input">
+                    <button id="send-file-btn" disabled>Send File</button>
+                </div>
+                <div class="form-group">
+                    <label for="file-send-progress">Send:</label>
+                    <progress id="file-send-progress" max="100" value="0"></progress>
+                </div>
+                <div class="form-group">
+                    <label for="file-recv-progress">Recv:</label>
+                    <progress id="file-recv-progress" max="100" value="0"></progress>
+                </div>
+                <div id="downloads"></div>
+            </div>
+
+            <div class="section">
+                <h3>Call</h3>
+                <div class="form-group inline">
+                    <button id="start-call-btn" disabled>Start Call</button>
+                    <button id="hangup-btn" disabled>Hang Up</button>
+                    <button id="mute-btn" disabled>Mute</button>
+                    <button id="cam-btn" disabled>Camera Off</button>
+                    <button id="share-btn" disabled>Share Screen</button>
+                    <button id="stop-share-btn" disabled>Stop Share</button>
+                </div>
+                <div class="form-group">
+                    <label>Local:</label>
+                    <video id="local-video" autoplay playsinline muted></video>
+                </div>
+                <div class="form-group">
+                    <label>Remote:</label>
+                    <video id="remote-video" autoplay playsinline></video>
+                </div>
+            </div>
         </div>
 
         <div class="test-results">
@@ -77,7 +113,7 @@
         </div>
     </div>
 
-    <script type="module" src="src/chat.js"></script>
+    <script type="module" src="/src/chat.js"></script>
 </body>
 
 </html>

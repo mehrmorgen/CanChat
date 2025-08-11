@@ -10,9 +10,12 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
 
 - **Direct P2P Communication**: Messages flow directly between browsers after connection establishment
 - **No Server Dependencies**: Uses PeerJS cloud signaling and Google STUN servers for connection setup
-- **Single File Application**: Entirely self-contained HTML file with no build process required
+- **Modular ESM Architecture**: Native ES modules with separate CSS; no build step required
 - **Real-time Messaging**: Instant message delivery between connected peers
-- **Simple Interface**: Clean, minimal UI focused on core chat functionality
+- **File Transfer**: Send and receive files with progress indicators and downloads list
+- **Audio/Video Calling**: Start a 1:1 call with microphone and camera
+- **Screen Sharing**: Share your screen during a call and stop sharing anytime
+- **Simple Interface**: Clean, minimal UI focused on core chat, file transfers, and calls
 
 ## How to Test
 
@@ -22,19 +25,23 @@ A minimal peer-to-peer text chat application that enables direct browser-to-brow
    - Device 1: Open [https://mehrmorgen.github.io/CanChat/chat.html](https://mehrmorgen.github.io/CanChat/chat.html)
    - Device 2: Open [https://mehrmorgen.github.io/CanChat/chat.html](https://mehrmorgen.github.io/CanChat/chat.html)
 
-2. **Generate Peer IDs**:
-   - Click "Generate My Peer ID" on both devices
-   - Each device will get a unique peer ID
+2. **Wait for Peer IDs**:
+   - Each page automatically shows its unique peer ID under "Your Peer ID"
 
 3. **Establish Connection**:
-   - On Device 1: Enter Device 2's peer ID and click "Connect to Peer"
-   - On Device 2: Enter Device 1's peer ID and click "Connect to Peer"
-   - Wait for "Connected!" message to appear
+   - On Device 1: Enter Device 2's peer ID and click "Connect"
+   - On Device 2: Enter Device 1's peer ID and click "Connect"
+   - Wait for the connection status to show "Connected"
 
 4. **Start Chatting**:
    - Type messages in the message input field
-   - Click "Send Message" or press Enter
+   - Click "Send" or press Enter
    - Messages will appear in real-time on both devices
+
+5. **File Transfer (optional)**:
+   - Choose a small file via the file picker
+   - Click "Send File" and watch the send/receive progress
+   - The peer will see a download link under "Downloads"
 
 ### Testing Scenarios
 
@@ -91,10 +98,18 @@ cd CanChat
 # Install dependencies
 bun install
 
-# Serve locally (HTTPS required for WebRTC)
+# Start HTTPS dev server (required for WebRTC)
 bun run dev
 
-# The application is a single HTML file with no build process
+# Open the app (accept self-signed cert warning)
+open https://localhost:8443/chat.html
+# or manually visit the URL in your browser
+```
+
+Note: If HTTPS certificate files are missing, generate self‑signed certs (development only):
+
+```bash
+openssl req -x509 -newkey rsa:2048 -keyout localhost.key -out localhost.crt -days 30 -nodes -subj "/CN=localhost"
 ```
 
 #### Development Features
@@ -167,11 +182,11 @@ To share the application for testing:
 
 1. **Direct Link**: Share `https://mehrmorgen.github.io/CanChat/chat.html`
 2. **QR Code**: Generate QR code for the URL for mobile device testing
-3. **Testing Setup**: 
-   - Person A opens the URL and generates a peer ID
-   - Person B opens the URL and generates a peer ID
-   - Both persons exchange peer IDs and connect
-   - Start chatting to test cross-network functionality
+3. **Testing Setup**:
+   - Open the URL on both devices (peer IDs appear automatically under "Your Peer ID")
+   - Exchange peer IDs and click "Connect" on each device
+   - Send messages both ways to verify real-time chat
+   - Optionally send a small file to verify file transfer
 
 #### Deployment Verification
 
@@ -226,13 +241,24 @@ To share the application for testing:
 - **Check**: Verify connection status shows "Connected!"
 - **Retry**: Try refreshing both pages and reconnecting
 
+## Testing
+
+Run unit tests with Bun:
+
+```bash
+bun test
+bun test --watch
+bun test --coverage
+```
+
+Note: Optional browser automation examples using Playwright are available (see `tests/automation`). These require the HTTPS dev server to be running and are not part of the default test script.
+
 ## Contributing
 
 1. Fork the repository
-2. Make changes to `chat.html`
-3. Test locally using HTTPS server
+2. Make changes in `src/` (e.g., `src/chat.js`, `src/utils.js`, `src/styles.css`) and `chat.html` as needed
+3. Run tests locally (see Testing) and verify over HTTPS (`bun run dev` then open https://localhost:8443/chat.html)
 4. Submit a pull request
-5. Changes will be automatically deployed upon merge
 
 ## License
 

@@ -5,9 +5,10 @@
   "description": "A minimal peer-to-peer text chat application using WebRTC and PeerJS",
   "scripts": {
     "dev": "bun run server.js",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage",
+    "test": "bun test tests/**/*.test.js tests/*.test.js",
+    "test:watch": "bun test --watch tests/**/*.test.js tests/*.test.js",
+    "test:coverage": "bun test --coverage tests/**/*.test.js tests/*.test.js",
+    "test:e2e": "bun run tests/automation/browser-automation-test.js",
     "test:mutation": "stryker run",
     "test:all": "bun run test:coverage && bun run test:mutation",
     "start": "bun run server.js"

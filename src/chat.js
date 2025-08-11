@@ -11,10 +11,7 @@ const Peer = (typeof window !== 'undefined') ? window.Peer : null;
 
 // Internal modules
 import { 
-    formatTimestamp, 
-    validatePeerId, 
-    createSystemMessage,
-    createMessage,
+    validatePeerId,
     getElementById,
     addEventListenerSafe,
     updateMyId,
@@ -30,6 +27,14 @@ import {
 let peer = null;
 let connection = null;
 let myId = null;
+
+// Media state for A/V and screen sharing
+let mediaCall = null; // PeerJS MediaConnection
+let localStream = null; // MediaStream for microphone/camera
+let originalCamTrack = null; // To restore after screen sharing
+let isMuted = false;
+let isCamOff = false;
+let isSharing = false;
 
 // Modern configuration using object destructuring and default parameters
 const CONFIG = {
@@ -235,7 +240,7 @@ const showBrowserUpgradeWarning = (browserInfo) => {
 const validateStrictModernFeatures = () => {
     const requiredFeatures = new Map([
         // ES2020+ JavaScript features
-        ['Nullish Coalescing', () => null ?? 'default'],
+        // ['Nullish Coalescing', () => null ?? 'default'],
         ['BigInt', () => BigInt(123n)],
         ['Promise.allSettled', () => Promise.allSettled([Promise.resolve(1)])],
         ['String.matchAll', () => 'test'.matchAll(/t/g)],
@@ -380,7 +385,6 @@ const initializePeer = async () => {
             debug: window.location.hostname === 'localhost' ? 2 : 0,
 
             // Modern PeerJS configuration
-            serialization: 'json', // Use JSON serialization for better performance
             reliable: true, // Enable reliable data channels
         };
 
@@ -416,6 +420,14 @@ const initializePeer = async () => {
             addSystemMessage(`📞 Incoming connection from: ${conn.peer}`);
             handleIncomingConnection(conn);
         });
+
+        // Handle incoming media (A/V) calls
+        if (typeof peer.on === 'function') {
+            peer.on('call', (call) => {
+                addSystemMessage('📲 Incoming media call');
+                handleIncomingMediaCall(call);
+            });
+        }
 
         peer.on('error', (error) => {
             console.error('PeerJS Error:', error);
@@ -502,8 +514,7 @@ const connectToPeer = (peerId) => {
 
     try {
         connection = peer.connect(peerId, {
-            reliable: true,
-            serialization: 'json'
+            reliable: true
         });
 
         connection.on('open', () => {
@@ -540,13 +551,41 @@ const connectToPeer = (peerId) => {
  * @param {any} data - The received data
  */
 const handleReceivedMessage = (data) => {
-    if (typeof data === 'string') {
-        addMessageToChat(data, 'peer');
-    } else if (data && typeof data === 'object' && data.message) {
-        addMessageToChat(data.message, 'peer');
-    } else {
+    try {
+        if (typeof data === 'string') {
+            // Try to parse JSON control messages for file transfer
+            try {
+                const maybe = JSON.parse(data);
+                if (maybe && maybe.__type === 'file-header') {
+                    handleFileHeader(maybe);
+                    return;
+                }
+                if (maybe && maybe.__type === 'file-end') {
+                    handleFileEnd();
+                    return;
+                }
+            } catch {/* not JSON -> treat as plain chat text */}
+            addMessageToChat(data, 'peer');
+            return;
+        }
+
+        // Binary chunk (ArrayBuffer or TypedArray)
+        if (data instanceof ArrayBuffer || (data && typeof data.byteLength === 'number')) {
+            const buf = data instanceof ArrayBuffer ? data : data.buffer;
+            handleFileChunk(buf);
+            return;
+        }
+
+        if (data && typeof data === 'object' && data.message) {
+            addMessageToChat(data.message, 'peer');
+            return;
+        }
+
         console.warn('Received unknown data format:', data);
         addSystemMessage('⚠️ Received message in unknown format');
+    } catch (err) {
+        console.error('Error handling incoming data:', err);
+        addSystemMessage('❌ Error handling incoming data');
     }
 };
 
@@ -580,6 +619,300 @@ const sendMessage = (message) => {
     }
 };
 
+// ===== FILE TRANSFER SUPPORT =====
+
+const FILE_CHUNK_SIZE = 16 * 1024;
+let incomingChunks = [];
+let incomingMeta = null;
+let incomingReceived = 0;
+
+const getProgressEl = (id) => getElementById(id);
+
+const updateProgress = (id, value) => {
+    const el = getProgressEl(id);
+    if (el && 'value' in el) {
+        const v = Math.max(0, Math.min(100, Math.round(value)));
+        try { el.value = v; } catch {}
+    }
+};
+
+const addDownloadLink = (blob, name = 'download') => {
+    const downloads = getElementById('downloads');
+    if (!downloads) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.textContent = `Download ${name} (${blob.size} bytes)`;
+    const div = document.createElement('div');
+    div.appendChild(a);
+    downloads.appendChild(div);
+};
+
+const handleFileHeader = (h) => {
+    incomingMeta = h || {};
+    incomingChunks = [];
+    incomingReceived = 0;
+    updateProgress('file-recv-progress', 0);
+    if (incomingMeta?.name) {
+        addSystemMessage(`📥 Incoming file: ${incomingMeta.name} (${incomingMeta.size ?? 0} bytes)`);
+    }
+};
+
+const handleFileChunk = (buf) => {
+    if (!buf) return;
+    const arrBuf = buf instanceof ArrayBuffer ? buf : buf.buffer;
+    incomingChunks.push(arrBuf);
+    incomingReceived += arrBuf.byteLength ?? 0;
+    if (incomingMeta?.size) {
+        const pct = (incomingReceived / incomingMeta.size) * 100;
+        updateProgress('file-recv-progress', pct);
+    }
+};
+
+const handleFileEnd = () => {
+    try {
+        const blob = new Blob(incomingChunks, { type: incomingMeta?.mime || 'application/octet-stream' });
+        addDownloadLink(blob, incomingMeta?.name || 'download');
+        updateProgress('file-recv-progress', 100);
+        addSystemMessage('✅ File received');
+    } finally {
+        incomingChunks = [];
+        incomingMeta = null;
+        incomingReceived = 0;
+    }
+};
+
+const sendFile = async (file, onProgress) => {
+    if (!connection?.open || !file) {
+        addSystemMessage('❌ Cannot send file: no connection or file missing');
+        return;
+    }
+    try {
+        const header = { __type: 'file-header', name: file.name, size: file.size, mime: file.type || 'application/octet-stream' };
+        connection.send(JSON.stringify(header));
+        for (let offset = 0; offset < file.size; offset += FILE_CHUNK_SIZE) {
+            const slice = file.slice(offset, offset + FILE_CHUNK_SIZE);
+            const buf = await slice.arrayBuffer();
+            connection.send(buf);
+            const pct = Math.min(100, Math.round(((offset + FILE_CHUNK_SIZE) / file.size) * 100));
+            if (typeof onProgress === 'function') onProgress(pct);
+            if (connection.bufferSize > 4 * FILE_CHUNK_SIZE) {
+                await new Promise(r => setTimeout(r, 4));
+            }
+        }
+        connection.send(JSON.stringify({ __type: 'file-end' }));
+        addSystemMessage(`📤 File sent: ${file.name} (${file.size} bytes)`);
+    } catch (err) {
+        console.error('sendFile error:', err);
+        addSystemMessage('❌ Failed to send file');
+    }
+};
+
+// ===== MEDIA CALL SUPPORT =====
+
+const getEl = (id) => getElementById(id);
+const getLocalVideoEl = () => getEl('local-video');
+const getRemoteVideoEl = () => getEl('remote-video');
+
+const setCallControls = (active = false) => {
+    const startBtn = getEl('start-call-btn');
+    const hangupBtn = getEl('hangup-btn');
+    const muteBtn = getEl('mute-btn');
+    const camBtn = getEl('cam-btn');
+    const shareBtn = getEl('share-btn');
+    const stopShareBtn = getEl('stop-share-btn');
+
+    if (startBtn) startBtn.disabled = !connection?.open || active;
+    if (hangupBtn) hangupBtn.disabled = !active;
+    if (muteBtn) {
+        muteBtn.disabled = !active;
+        muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    }
+    if (camBtn) {
+        camBtn.disabled = !active;
+        camBtn.textContent = isCamOff ? 'Camera On' : 'Camera Off';
+    }
+    if (shareBtn) shareBtn.disabled = !active || isSharing;
+    if (stopShareBtn) stopShareBtn.disabled = !active || !isSharing;
+};
+
+const attachLocalVideo = (stream) => {
+    const v = getLocalVideoEl();
+    if (v) {
+        try { v.srcObject = stream; } catch {}
+    }
+};
+
+const attachRemoteVideo = (stream) => {
+    const v = getRemoteVideoEl();
+    if (v) {
+        try { v.srcObject = stream; } catch {}
+    }
+};
+
+const stopStreamTracks = (stream) => {
+    try { stream?.getTracks?.().forEach(t => t.stop()); } catch {}
+};
+
+const getLocalMediaStream = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+        addSystemMessage('❌ Media devices not available');
+        throw new Error('media devices unavailable');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    localStream = stream;
+    // keep reference of original cam track
+    originalCamTrack = stream.getVideoTracks?.()[0] || null;
+    isMuted = false;
+    isCamOff = false;
+    attachLocalVideo(stream);
+    return stream;
+};
+
+const handleIncomingMediaCall = async (call) => {
+    try {
+        if (!localStream) await getLocalMediaStream();
+        mediaCall = call;
+        setCallControls(true);
+        call.on('stream', (remoteStream) => {
+            attachRemoteVideo(remoteStream);
+            addSystemMessage('🎥 Remote stream received');
+        });
+        call.on('close', () => {
+            addSystemMessage('📴 Call ended');
+            setCallControls(false);
+            isSharing = false;
+            attachRemoteVideo(null);
+            attachLocalVideo(null);
+            stopStreamTracks(localStream);
+            localStream = null;
+            mediaCall = null;
+        });
+        call.answer(localStream);
+        addSystemMessage('✅ Answered incoming call');
+    } catch (err) {
+        console.error('Failed to answer call', err);
+        addSystemMessage('❌ Failed to answer call');
+        try { call.close(); } catch {}
+    }
+};
+
+const handleStartCallClick = async () => {
+    if (!peer || !connection?.open) {
+        addSystemMessage('❌ Connect to a peer first');
+        return;
+    }
+    try {
+        const stream = localStream || await getLocalMediaStream();
+        mediaCall = peer.call(connection.peer, stream);
+        if (!mediaCall) {
+            addSystemMessage('❌ Failed to start call');
+            return;
+        }
+        mediaCall.on('stream', (remoteStream) => {
+            attachRemoteVideo(remoteStream);
+            addSystemMessage('🎥 Remote stream received');
+        });
+        mediaCall.on('close', () => {
+            addSystemMessage('📴 Call ended');
+            setCallControls(false);
+            isSharing = false;
+            attachRemoteVideo(null);
+            attachLocalVideo(null);
+            stopStreamTracks(localStream);
+            localStream = null;
+            mediaCall = null;
+        });
+        setCallControls(true);
+        addSystemMessage('📞 Calling peer...');
+    } catch (err) {
+        console.error('Start call failed', err);
+        addSystemMessage('❌ Start call failed');
+    }
+};
+
+const handleHangupClick = () => {
+    try { mediaCall?.close(); } catch {}
+    try { stopStreamTracks(localStream); } catch {}
+    mediaCall = null;
+    localStream = null;
+    isSharing = false;
+    setCallControls(false);
+    attachLocalVideo(null);
+    attachRemoteVideo(null);
+};
+
+const handleMuteClick = () => {
+    if (!localStream) return;
+    const track = localStream.getAudioTracks?.()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    isMuted = !track.enabled ? true : false;
+    setCallControls(true);
+};
+
+const handleCamClick = () => {
+    if (!localStream) return;
+    const track = localStream.getVideoTracks?.()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    isCamOff = !track.enabled ? true : false;
+    setCallControls(true);
+};
+
+const replaceVideoTrack = async (newTrack) => {
+    const sender = mediaCall?.peerConnection?.getSenders?.().find(s => s.track && s.track.kind === 'video');
+    if (sender && newTrack) {
+        try { await sender.replaceTrack(newTrack); } catch (e) { console.warn('replaceTrack failed', e); }
+    }
+};
+
+const handleShareClick = async () => {
+    if (!mediaCall) { addSystemMessage('❌ Start a call first'); return; }
+    try {
+        if (!navigator?.mediaDevices?.getDisplayMedia) {
+            addSystemMessage('❌ Screen share not supported');
+            return;
+        }
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        const screenTrack = displayStream.getVideoTracks?.()[0];
+        if (!screenTrack) { addSystemMessage('❌ No screen track'); return; }
+        if (!originalCamTrack && localStream) {
+            originalCamTrack = localStream.getVideoTracks?.()[0] || null;
+        }
+        await replaceVideoTrack(screenTrack);
+        // also show local preview as screen
+        attachLocalVideo(displayStream);
+        isSharing = true;
+        setCallControls(true);
+        // When user stops sharing from browser UI
+        screenTrack.onended = async () => { try { await handleStopShareClick(); } catch {} };
+        addSystemMessage('🖥️ Screen sharing started');
+    } catch (err) {
+        console.error('Screen share failed', err);
+        addSystemMessage('❌ Screen share failed');
+    }
+};
+
+const handleStopShareClick = async () => {
+    if (!isSharing) return;
+    try {
+        const camTrack = originalCamTrack;
+        if (camTrack) {
+            await replaceVideoTrack(camTrack);
+            // restore local preview to camera stream if available
+            if (localStream) attachLocalVideo(localStream);
+        }
+    } catch (err) {
+        console.warn('Stop share error', err);
+    } finally {
+        isSharing = false;
+        setCallControls(true);
+        addSystemMessage('🛑 Screen sharing stopped');
+    }
+};
+
 // ===== UI CONTROL FUNCTIONS =====
 
 /**
@@ -587,9 +920,11 @@ const sendMessage = (message) => {
  */
 const enableSendButton = () => {
     const sendBtn = getElementById('send-btn');
-    if (sendBtn) {
-        sendBtn.disabled = false;
-    }
+    if (sendBtn) sendBtn.disabled = false;
+    const sendFileBtn = getElementById('send-file-btn');
+    if (sendFileBtn) sendFileBtn.disabled = false;
+    // Enable call controls for an idle (not yet active) call when connected
+    try { setCallControls(false); } catch {}
 };
 
 /**
@@ -600,6 +935,11 @@ const disableSendButton = () => {
     if (sendBtn) {
         sendBtn.disabled = true;
     }
+    const sendFileBtn = getElementById('send-file-btn');
+    if (sendFileBtn) {
+        sendFileBtn.disabled = true;
+    }
+    try { setCallControls(false); } catch {}
 };
 
 /**
@@ -608,6 +948,18 @@ const disableSendButton = () => {
 const handleConnectionClose = () => {
     addSystemMessage('🔌 Peer connection closed');
     updateConnectionStatus('disconnected', 'Connection closed');
+    // Clean up media state
+    try { mediaCall?.close(); } catch {}
+    try { stopStreamTracks(localStream); } catch {}
+    mediaCall = null;
+    localStream = null;
+    originalCamTrack = null;
+    isMuted = false;
+    isCamOff = false;
+    isSharing = false;
+    try { attachLocalVideo(null); } catch {}
+    try { attachRemoteVideo(null); } catch {}
+    setCallControls(false);
     disableSendButton();
     connection = null;
 };
@@ -649,6 +1001,26 @@ const handleSendClick = () => {
 };
 
 /**
+ * Handles send file button click
+ */
+const handleSendFileClick = async () => {
+    const fileInput = getElementById('file-input');
+    const sendFileBtn = getElementById('send-file-btn');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        addSystemMessage('❌ Please choose a file to send.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (sendFileBtn) sendFileBtn.disabled = true;
+    try {
+        await sendFile(file, (pct) => updateProgress('file-send-progress', pct));
+        updateProgress('file-send-progress', 100);
+    } finally {
+        if (sendFileBtn) sendFileBtn.disabled = false;
+    }
+};
+
+/**
  * Handles message input keypress events
  * @param {KeyboardEvent} event - The keypress event
  */
@@ -670,7 +1042,14 @@ const setupEventListeners = () => {
         ['connect-btn', 'click', handleConnectClick],
         ['retry-btn', 'click', handleRetryClick],
         ['send-btn', 'click', handleSendClick],
-        ['message-input', 'keypress', handleMessageInputKeyPress]
+        ['message-input', 'keypress', handleMessageInputKeyPress],
+        ['send-file-btn', 'click', handleSendFileClick],
+        ['start-call-btn', 'click', handleStartCallClick],
+        ['hangup-btn', 'click', handleHangupClick],
+        ['mute-btn', 'click', handleMuteClick],
+        ['cam-btn', 'click', handleCamClick],
+        ['share-btn', 'click', handleShareClick],
+        ['stop-share-btn', 'click', handleStopShareClick]
     ];
 
     eventListeners.forEach(([elementId, event, handler]) => {
